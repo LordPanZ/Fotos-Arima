@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-ssr/
+desktop/node_modules/
+desktop/dist/
+desktop/app/
+*.local
+.env
+.env.local
+.DS_Store
+*.log
+.vite/

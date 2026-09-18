@@ -1,0 +1,29 @@
+{
+  "name": "fotos-arima-escritorio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Envoltorio de escritorio de Fotos Arima",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.arima.fotos",
+    "productName": "Fotos Arima",
+    "directories": { "output": "dist" },
+    "files": ["main.cjs", "../dist/**/*", "!node_modules/**/*"],
+    "extraMetadata": { "main": "main.cjs" },
+    "win": { "target": ["nsis"], "icon": "../public/icons/icon-512.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true },
+    "mac": { "target": ["dmg"], "icon": "../public/icons/icon-512.png", "category": "public.app-category.photography" },
+    "linux": { "target": ["AppImage", "deb"], "icon": "../public/icons/icon-512.png", "category": "Graphics" }
+  }
+}

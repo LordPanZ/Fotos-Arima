@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Fotos Arima">
+  <rect width="48" height="48" rx="11" fill="#b4553a"/>
+  <circle cx="24" cy="24" r="8.5" fill="none" stroke="#faf0e6" stroke-width="2.6"/>
+  <path d="M24 15.5c4 3 4 6 0 8.5s-4 5.5 0 8.5" fill="none" stroke="#faf0e6" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="33.5" cy="15" r="3" fill="#f0c88a"/>
+</svg>

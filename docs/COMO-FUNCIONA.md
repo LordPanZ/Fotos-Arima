@@ -1,0 +1,176 @@
+# Cómo funciona por dentro
+
+## El recorrido de una foto
+
+```
+Google Fotos ──selector──▶ descarga ──▶ dispositivo (IndexedDB)
+                                            │
+                                            ▼
+                                     clasificación
+                                            │
+                     ┌──────────────────────┼──────────────────────┐
+                     ▼                      ▼                      ▼
+              confianza alta         confianza baja          no es manualidad
+                     │                      │                      │
+                     ▼                      ▼                      ▼
+                 Catálogo             Por revisar             Descartadas
+                     │                      │
+                     └───── nombre ◀────────┘
+                              │
+                              ▼
+                     compartir / exportar
+```
+
+## Afinar la selección
+
+El objetivo no es meter todo lo que haya en la cuenta, sino quedarse **solo con
+las manualidades**. Hay cuatro filtros encadenados:
+
+1. **El selector de Google.** Tú eliges qué fotos entran. Es el filtro más
+   grueso y el más barato.
+2. **El clasificador.** Decide si la foto muestra una manualidad y de qué tipo,
+   con una confianza de 0 a 1. Rechaza explícitamente retratos sin pieza,
+   paisajes, comida, capturas de pantalla, documentos y productos comprados.
+3. **El umbral de confianza** (Ajustes, 60 % por defecto). Lo que queda por
+   debajo no entra directamente al catálogo: va a *Por revisar*. Subirlo afina
+   más la selección a costa de revisar más a mano; bajarlo deja decidir a la app.
+4. **La revisión manual.** Una foto por pantalla, con la propuesta del
+   clasificador y el motivo. Confirmas, corriges el tipo o descartas.
+
+Una decisión tuya siempre gana: al confirmar o cambiar el tipo a mano, la ficha
+queda marcada como `manual` con confianza 1 y ningún análisis posterior la
+sobrescribe.
+
+## Los dos motores de clasificación
+
+### Con clave de la API de Claude (recomendado)
+
+Cada foto se reduce a 768 px por el lado mayor y se envía al modelo de visión
+junto con la taxonomía completa de tipos de manualidad. La respuesta viene con
+esquema fijo (*structured outputs*), así que siempre se puede leer:
+
+| Campo | Para qué sirve |
+|---|---|
+| `es_manualidad`, `confianza` | Entrar al catálogo o ir a revisión |
+| `categoria`, `categoria_alternativa` | Agrupar la galería |
+| `tecnica`, `materiales`, `colores` | Ficha y búsqueda |
+| `descripcion` | El nombre del archivo |
+| `etiquetas` | Búsqueda |
+| `motivo` | Explicar la decisión al revisar |
+
+El prompt (en `src/lib/classifier/ai.ts`) incluye reglas de calibración
+explícitas para que el modelo **no infle la confianza**: lo dudoso debe quedar
+en la franja media, que es justo lo que manda las fotos a revisión manual.
+
+### Sin clave (modo local)
+
+Analiza la imagen en el propio dispositivo: brillo, saturación, variedad de
+color, zonas planas y densidad de bordes. Con eso descarta con bastante acierto
+capturas de pantalla, documentos e imágenes sin detalle, y aprovecha el nombre
+del archivo si menciona una técnica conocida. **No distingue tipos de
+manualidad**: todo lo demás queda en *Por revisar* con confianza baja, que es la
+respuesta honesta cuando no se puede saber.
+
+## Coste aproximado con IA
+
+Orientativo, por foto analizada (la imagen son unos 800 tokens de entrada):
+
+| Modelo | Por foto | 500 fotos | 2.000 fotos |
+|---|---|---|---|
+| Claude Opus 5 | ~0,02 $ | ~10 $ | ~40 $ |
+| Claude Sonnet 5 | ~0,008 $ | ~4 $ | ~16 $ |
+| Claude Haiku 4.5 | ~0,004 $ | ~2 $ | ~8 $ |
+
+Se paga solo al analizar. Cambiar nombres, agrupar, buscar, compartir y exportar
+no cuestan nada. El ajuste **Precisión** mueve el esfuerzo del modelo (y con él
+el coste) entre rápida, equilibrada y máxima.
+
+## Los nombres
+
+La plantilla por defecto es `{categoria} - {descripcion} - {fecha}`, que produce
+cosas como:
+
+```
+Macramé y fibras - colgante de pared beige - 2024-05-12.jpg
+Cerámica y arcilla - tazas esmaltadas en azul - 2024-06-03.jpg
+```
+
+Reglas:
+
+- Se aplica sola al clasificar, y se puede volver a aplicar en lote desde
+  Ajustes o desde la barra de selección.
+- **Un nombre escrito a mano no se sobrescribe nunca** (salvo que uses
+  explícitamente «Aplicar a todas»).
+- Los caracteres que rompen nombres de archivo en Windows, macOS o Android se
+  sustituyen, y los duplicados reciben un « (2)», « (3)»…
+- Los tokens vacíos no dejan guiones sueltos.
+
+## Compartir
+
+- **Móvil:** menú nativo del sistema con las fotos adjuntas (Web Share API), así
+  que aparecen WhatsApp, Telegram, correo, AirDrop…
+- **Escritorio:** si el navegador no admite compartir archivos, las descarga
+  directamente y te lo dice.
+- **En lote:** selecciona varias fotos y compártelas juntas, o genera un ZIP con
+  carpetas por tipo de manualidad y un `catalogo.csv` listo para abrir en Excel.
+
+## Privacidad
+
+- Las fotos y las fichas viven en **IndexedDB, en tu dispositivo**. No hay
+  servidor propio ni cuenta que crear.
+- El permiso de Google es de **solo lectura** y limitado a lo que marcas en el
+  selector.
+- Con la IA activada, **solo se envía a `api.anthropic.com` una copia reducida
+  de cada foto** mientras dura el análisis.
+- La clave de la API se guarda en IndexedDB de este dispositivo y se envía
+  únicamente a Anthropic.
+
+### Sobre la clave de API en el navegador
+
+La app llama a la API de Claude directamente desde el navegador
+(`dangerouslyAllowBrowser`). Es una decisión consciente para una herramienta
+personal: evita montar y mantener un servidor intermedio. La contrapartida es
+que la clave está en el dispositivo, así que:
+
+- Usa una clave dedicada a esta app y ponle un límite de gasto en la consola de
+  Anthropic.
+- No instales la app en un ordenador compartido con tu clave dentro.
+- Si la app llegara a usarse con más gente, la clave debería moverse a un
+  pequeño servidor intermedio.
+
+## Estructura del código
+
+```
+src/
+├── taxonomy.ts              tipos de manualidad (fuente única)
+├── types.ts                 modelo de datos y ajustes
+├── lib/
+│   ├── db.ts                IndexedDB: fotos, imágenes, ajustes
+│   ├── image.ts             reescalado, miniaturas, EXIF, huella
+│   ├── naming.ts            plantillas de nombre
+│   ├── share.ts             Web Share API y alternativas
+│   ├── exportZip.ts         ZIP + catálogo CSV/JSON
+│   ├── importar.ts          entrada de fotos (Google y local)
+│   ├── googleAuth.ts        OAuth con Google Identity Services
+│   ├── googlePicker.ts      API del Selector de Google Fotos
+│   └── classifier/
+│       ├── ai.ts            modelo de visión (Claude)
+│       ├── heuristic.ts     análisis local sin conexión
+│       └── index.ts         cola, umbrales y concurrencia
+├── state/store.tsx          estado de la aplicación
+├── components/              piezas de interfaz
+└── views/                   Catálogo, Importar, Revisar, Ajustes
+```
+
+## Comprobar que todo sigue funcionando
+
+```bash
+npm run typecheck   # TypeScript en modo estricto
+npm run build       # compilación de producción
+npm run smoke       # recorrido completo en un navegador real
+```
+
+`npm run smoke` levanta la build, abre Chromium y recorre el camino entero sin
+tocar Google ni la API de Claude: importar, clasificar, revisar, agrupar,
+renombrar, comprobar que el cambio sobrevive a una recarga, seleccionar en lote
+y buscar.

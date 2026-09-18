@@ -1,0 +1,49 @@
+name: Instaladores de escritorio
+
+# Cada instalador se compila en su propio sistema: electron-builder no puede
+# generar un .dmg desde Windows ni un .exe desde Linux.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  empaquetar:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - so: ubuntu-latest
+            nombre: linux
+          - so: windows-latest
+            nombre: windows
+          - so: macos-latest
+            nombre: macos
+    runs-on: ${{ matrix.so }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm --prefix desktop install
+      - run: npm --prefix desktop run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fotos-arima-${{ matrix.nombre }}
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+          if-no-files-found: ignore

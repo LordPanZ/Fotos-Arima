@@ -1,0 +1,36 @@
+name: Comprobaciones
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verificar:
+    name: Tipos, compilación y prueba de humo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Comprobar tipos
+        run: npm run typecheck
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Instalar Chromium para la prueba de humo
+        # La misma versión que playwright-core, para que el binario coincida
+        # con la ruta que devuelve `chromium.executablePath()`.
+        run: >
+          npx --yes playwright@$(node -p "require('playwright-core/package.json').version")
+          install --with-deps chromium
+
+      - name: Prueba de humo
+        run: npm run smoke
