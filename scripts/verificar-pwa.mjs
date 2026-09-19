@@ -68,8 +68,15 @@ const url = `http://127.0.0.1:${servidor.address().port}${BASE}`;
 const navegador = await chromium.launch({ executablePath: ejecutable, args: ['--no-sandbox'] });
 const pagina = await navegador.newPage();
 const fallos = [];
-pagina.on('requestfailed', (p) => fallos.push(`${p.url()} (${p.failure()?.errorText})`));
-pagina.on('response', (r) => r.status() >= 400 && fallos.push(`${r.url()} → ${r.status()}`));
+// El catálogo compartido es externo: que no se alcance desde aquí no dice
+// nada sobre si la app es instalable, que es lo que se está comprobando.
+const externo = (url) => /supabase\.co|googleapis\.com|anthropic\.com/.test(url);
+pagina.on('requestfailed', (p) => {
+  if (!externo(p.url())) fallos.push(`${p.url()} (${p.failure()?.errorText})`);
+});
+pagina.on('response', (r) => {
+  if (r.status() >= 400 && !externo(r.url())) fallos.push(`${r.url()} → ${r.status()}`);
+});
 
 try {
   await pagina.goto(url, { waitUntil: 'networkidle' });

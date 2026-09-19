@@ -13,8 +13,10 @@ funcionando sin conexión y sincroniza cuando vuelve.
 
 ## Qué hace
 
-**Importar.** Desde Google Fotos a través del selector oficial de Google, o
-arrastrando archivos (por ejemplo una descarga de Google Takeout).
+**Importar.** Desde Google Fotos a través del selector oficial de Google,
+arrastrando archivos (por ejemplo una descarga de Google Takeout), o desde el
+formulario **Tailerren Argazkiak Arima**, con el que los monitores mandan las
+fotos de sus talleres — [docs/FORMULARIO-MONITORES.md](docs/FORMULARIO-MONITORES.md).
 
 **Afinar la selección.** Un modelo de visión decide si cada foto muestra una
 manualidad y con cuánta seguridad. Descarta retratos sin pieza, paisajes,

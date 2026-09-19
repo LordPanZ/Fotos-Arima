@@ -225,7 +225,7 @@ try {
 
   // ---------------------------------------------------------- importar
   await pagina.getByRole('button', { name: 'Importar', exact: true }).click();
-  await pagina.locator('input[type=file]').setInputFiles(rutaImagen);
+  await pagina.locator('input[accept="image/*"]').setInputFiles(rutaImagen);
 
   await pagina.waitForSelector('.estadistica__valor', { timeout: 20000 });
   const nuevas = await pagina.locator('.estadistica__valor').first().textContent();

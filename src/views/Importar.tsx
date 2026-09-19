@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTienda } from '../state/store';
 import { obtenerToken, cerrarSesionGoogle, hayTokenValido } from '../lib/googleAuth';
 import { borrarSesion, crearSesion, esperarSeleccion } from '../lib/googlePicker';
-import { importarArchivos, importarDesdeGoogle, type ProgresoImportacion, type ResultadoImportacion } from '../lib/importar';
+import { importarArchivos, importarDesdeGoogle, importarEnvio, type ProgresoImportacion, type ResultadoImportacion } from '../lib/importar';
+import { EXTENSION_ENVIO } from '../lib/envio';
 import { necesitaRevision } from '../lib/classifier';
 import { AvisoLinea, BarraProgreso, Vacio } from '../components/comunes';
-import { IconoCarpeta, IconoGoogle, IconoRefrescar } from '../components/Icons';
+import { IconoCarpeta, IconoGoogle, IconoRefrescar, IconoSobre } from '../components/Icons';
 
 type Fase = 'listo' | 'conectando' | 'esperando' | 'importando';
 
@@ -21,6 +22,7 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar'): vo
   const [encima, setEncima] = useState(false);
   const abortador = useRef<AbortController | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
+  const entradaEnvio = useRef<HTMLInputElement>(null);
 
   useEffect(() => () => abortador.current?.abort(), []);
 
@@ -121,6 +123,27 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar'): vo
           necesitaRevision(f, ajustes.umbralConfianza),
       ).length
     : 0;
+
+  const importarPaquete = useCallback(
+    async (archivo: File) => {
+      setResumen(null);
+      setFase('importando');
+      try {
+        const salida = await importarEnvio(archivo, ajustes, setProgreso);
+        mostrarResultado(salida);
+        tienda.avisar(
+          `Envío de «${salida.evento.titulo}» abierto: ${salida.nuevas.length} fotos a Revisar.`,
+          'exito',
+        );
+      } catch (error) {
+        tienda.avisar(error instanceof Error ? error.message : String(error), 'error');
+      } finally {
+        setFase('listo');
+        setProgreso(null);
+      }
+    },
+    [ajustes, tienda, mostrarResultado],
+  );
 
   const ocupado = fase !== 'listo';
   const porcentaje = progreso?.total ? Math.round((progreso.hechas / progreso.total) * 100) : 0;
@@ -244,6 +267,43 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar'): vo
             e.target.value = '';
           }}
         />
+      </div>
+
+      <div className="tarjeta">
+        <div className="tarjeta__titulo">
+          <IconoSobre style={{ width: 20, height: 20 }} />
+          <h2>Envío de un monitor</h2>
+        </div>
+        <p className="tarjeta__ayuda">
+          Abre aquí el archivo que te hayan mandado desde el formulario{' '}
+          <strong>Tailerren Argazkiak</strong> por WhatsApp o correo. Sus fotos entran directas a
+          Revisar con el título, la fecha y el lugar del taller.
+        </p>
+
+        <button
+          type="button"
+          className="boton"
+          disabled={ocupado}
+          onClick={() => entradaEnvio.current?.click()}
+        >
+          <IconoSobre className="boton__icono" />
+          Abrir un envío
+        </button>
+        <input
+          ref={entradaEnvio}
+          type="file"
+          accept=".zip,application/zip"
+          className="sr-solo"
+          onChange={(e) => {
+            const archivo = e.target.files?.[0];
+            e.target.value = '';
+            if (archivo) void importarPaquete(archivo);
+          }}
+        />
+        <p className="campo__ayuda" style={{ marginTop: 10 }}>
+          Los envíos terminan en <code>{EXTENSION_ENVIO}</code>. El enlace del formulario para tus
+          monitores es <code>{`${window.location.origin}${import.meta.env.BASE_URL}formulario/`}</code>
+        </p>
       </div>
 
       {progreso && progreso.fase !== 'hecho' && (

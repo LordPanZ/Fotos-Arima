@@ -1,0 +1,97 @@
+/* Formulario «Tailerren Argazkiak Arima», pensado para usarse en el móvil
+   y de pie: campos grandes, una sola columna y acciones al final. */
+
+.formulario {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+}
+
+.formulario__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 18px;
+}
+.formulario__logo { width: 42px; height: 42px; flex: none; }
+.formulario__cabecera h1 { font-size: 1.25rem; letter-spacing: -0.02em; }
+.formulario__cabecera p {
+  margin: 3px 0 0;
+  font-size: 0.85rem;
+  color: var(--texto-2);
+  line-height: 1.4;
+}
+
+.formulario__pareja { display: grid; gap: 0; }
+@media (min-width: 480px) {
+  .formulario__pareja { grid-template-columns: minmax(0, 150px) minmax(0, 1fr); gap: 12px; }
+}
+
+.formulario__tiras {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.formulario__tira {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radio-s);
+  overflow: hidden;
+  background: var(--fondo-2);
+  border: 1px solid var(--borde);
+}
+.formulario__tira img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.formulario__quitar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(3px);
+}
+.formulario__quitar svg { width: 13px; height: 13px; }
+.formulario__quitar:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.formulario__acciones { display: grid; gap: 10px; margin-top: 18px; }
+.formulario__pie {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--texto-3);
+  line-height: 1.5;
+}
+
+.formulario__aviso {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  color: var(--aviso);
+}
+
+/* -------------------------------------------------------- pantalla final */
+
+.formulario__hecho {
+  text-align: center;
+  padding: 48px 20px;
+}
+.formulario__marca-ok {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--exito-suave);
+  color: var(--exito);
+}
+.formulario__marca-ok svg { width: 30px; height: 30px; }
+.formulario__hecho h1 { font-size: 1.5rem; margin-bottom: 8px; }
+.formulario__hecho p { color: var(--texto-2); max-width: 40ch; margin: 0 auto 18px; }

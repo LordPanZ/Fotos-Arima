@@ -157,6 +157,13 @@ export const IconoVeto = (p: Props) => (
   <Icono {...p}><circle cx="12" cy="12" r="8.6" /><path d="m6.5 6.5 11 11" /></Icono>
 );
 
+export const IconoSobre = (p: Props) => (
+  <Icono {...p}>
+    <rect x="3" y="5.5" width="18" height="13" rx="2" />
+    <path d="m3.6 6.8 8.4 6 8.4-6" />
+  </Icono>
+);
+
 export const IconoLogo = (p: Props) => (
   <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false" {...p}>
     <rect width="48" height="48" rx="11" fill="#b4553a" />

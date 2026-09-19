@@ -35,6 +35,9 @@ jobs:
       - name: Prueba de humo
         run: npm run smoke
 
+      - name: Prueba del formulario de monitores
+        run: npm run smoke:formulario
+
       - name: Comprobar que sigue siendo instalable como PWA
         run: |
           VITE_BASE="/${GITHUB_REPOSITORY#*/}/" npm run build

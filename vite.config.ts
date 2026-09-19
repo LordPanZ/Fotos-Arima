@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -11,6 +12,14 @@ export default defineConfig({
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      input: {
+        // La app y el formulario de monitores son dos páginas del mismo sitio,
+        // así que comparten código (formato de envío, imágenes, estilos).
+        principal: resolve(__dirname, 'index.html'),
+        formulario: resolve(__dirname, 'formulario/index.html'),
+      },
+    },
   },
   plugins: [
     react(),
