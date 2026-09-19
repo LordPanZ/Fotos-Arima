@@ -21,10 +21,23 @@ Google Fotos ──selector──▶ descarga ──▶ dispositivo (IndexedDB)
                      compartir / exportar
 ```
 
+## Qué entra en el catálogo
+
+El catálogo recoge **dos cosas distintas**, y la taxonomía las separa con el
+campo `familia`:
+
+- **Manualidades** — 18 categorías, reconocidas por la técnica.
+- **Actividades de Arima** — `diskofesta` e `ihes-gela`, reconocidas por la
+  escena, no por un objeto. Aquí sí se cataloga a la gente participando.
+
+Esa distinción importa porque el clasificador necesita reglas propias para cada
+familia: sin ellas, una foto de una fiesta se descartaría por «no es una
+manualidad».
+
 ## Afinar la selección
 
 El objetivo no es meter todo lo que haya en la cuenta, sino quedarse **solo con
-las manualidades**. Hay cuatro filtros encadenados:
+lo que pertenece al catálogo**. Hay cuatro filtros encadenados:
 
 1. **El selector de Google.** Tú eliges qué fotos entran. Es el filtro más
    grueso y el más barato.
@@ -51,7 +64,7 @@ esquema fijo (*structured outputs*), así que siempre se puede leer:
 
 | Campo | Para qué sirve |
 |---|---|
-| `es_manualidad`, `confianza` | Entrar al catálogo o ir a revisión |
+| `entra_en_catalogo`, `confianza` | Entrar al catálogo o ir a revisión |
 | `categoria`, `categoria_alternativa` | Agrupar la galería |
 | `tecnica`, `materiales`, `colores` | Ficha y búsqueda |
 | `descripcion` | El nombre del archivo |
@@ -107,12 +120,19 @@ Reglas:
 
 ## Compartir
 
+- **Con ficha o sin ella.** Al compartir, la app pregunta: *Foto y ficha* añade
+  el nombre, la categoría y los materiales como texto; *Solo la foto* envía
+  únicamente las imágenes. La última elección queda marcada para la siguiente
+  vez.
 - **Móvil:** menú nativo del sistema con las fotos adjuntas (Web Share API), así
   que aparecen WhatsApp, Telegram, correo, AirDrop…
-- **Escritorio:** si el navegador no admite compartir archivos, las descarga
-  directamente y te lo dice.
-- **En lote:** selecciona varias fotos y compártelas juntas, o genera un ZIP con
-  carpetas por tipo de manualidad y un `catalogo.csv` listo para abrir en Excel.
+- **En lote:** «Seleccionar las N» marca de golpe todo lo que estés viendo, y se
+  comparten juntas en un solo envío.
+- **Si el dispositivo no sabe compartir archivos** (algunos navegadores de
+  escritorio), la app lo resuelve sola: descarga las fotos sueltas si son pocas,
+  o un único ZIP a partir de cuatro, para no lanzar una lluvia de descargas.
+- **Exportación:** ZIP con carpetas por categoría y un `catalogo.csv` listo para
+  abrir en Excel.
 
 ## Privacidad
 
@@ -142,7 +162,7 @@ que la clave está en el dispositivo, así que:
 
 ```
 src/
-├── taxonomy.ts              tipos de manualidad (fuente única)
+├── taxonomy.ts              categorías y familias (fuente única)
 ├── types.ts                 modelo de datos y ajustes
 ├── lib/
 │   ├── db.ts                IndexedDB: fotos, imágenes, ajustes
@@ -158,7 +178,7 @@ src/
 │       ├── heuristic.ts     análisis local sin conexión
 │       └── index.ts         cola, umbrales y concurrencia
 ├── state/store.tsx          estado de la aplicación
-├── components/              piezas de interfaz
+├── components/              piezas de interfaz (incluye el diálogo de envío)
 └── views/                   Catálogo, Importar, Revisar, Ajustes
 ```
 
@@ -172,5 +192,9 @@ npm run smoke       # recorrido completo en un navegador real
 
 `npm run smoke` levanta la build, abre Chromium y recorre el camino entero sin
 tocar Google ni la API de Claude: importar, clasificar, revisar, agrupar,
-renombrar, comprobar que el cambio sobrevive a una recarga, seleccionar en lote
-y buscar.
+renombrar, comprobar que el cambio sobrevive a una recarga, seleccionar en lote,
+compartir y buscar. También comprueba que **el menú cabe entero a 320 y 390 px**,
+que es donde se coló el fallo de que Ajustes quedara fuera de la pantalla.
+
+`npm run verificar-pwa` comprueba que la compilación publicada sigue siendo
+instalable desde un subdirectorio.

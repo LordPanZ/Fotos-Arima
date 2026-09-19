@@ -3,7 +3,7 @@ import type { Foto } from '../types';
 import { CATEGORIAS, categoria, NO_MANUALIDAD, SIN_CLASIFICAR } from '../taxonomy';
 import { useTienda } from '../state/store';
 import { nombreDesdePlantilla } from '../lib/naming';
-import { compartirFotos, descargarFoto } from '../lib/share';
+import { descargarFoto } from '../lib/share';
 import { BotonCerrar, ImagenFoto, formatearBytes, formatearFecha } from './comunes';
 import {
   IconoAtras, IconoChispa, IconoCompartir, IconoDescargar, IconoEstrella,
@@ -37,7 +37,7 @@ interface Props {
 }
 
 export function DetalleFoto({ foto, contexto, alCerrar, alCambiarFoto }: Props) {
-  const { ajustes, actualizarFoto, eliminarFotos, analizar, avisar } = useTienda();
+  const { ajustes, actualizarFoto, eliminarFotos, analizar, avisar, pedirCompartir } = useTienda();
   const [borrador, setBorrador] = useState<Borrador>(() => aBorrador(foto));
   const [ocupado, setOcupado] = useState(false);
   const ultimoGuardado = useRef(foto.id);
@@ -74,7 +74,7 @@ export function DetalleFoto({ foto, contexto, alCerrar, alCambiarFoto }: Props) 
       // Cambiar de categoría a mano es una decisión humana: cuenta como revisión.
       if (datos.categoria !== foto.categoria) {
         cambios.revision = datos.categoria === NO_MANUALIDAD ? 'descartada' : 'confirmada';
-        cambios.esManualidad = datos.categoria !== NO_MANUALIDAD;
+        cambios.entraEnCatalogo = datos.categoria !== NO_MANUALIDAD;
         cambios.motor = 'manual';
         cambios.confianza = 1;
       }
@@ -205,7 +205,7 @@ export function DetalleFoto({ foto, contexto, alCerrar, alCambiarFoto }: Props) 
             </label>
 
             <label className="campo">
-              <span className="campo__etiqueta">Tipo de manualidad</span>
+              <span className="campo__etiqueta">Categoría</span>
               <select
                 className="seleccion"
                 value={borrador.categoria}
@@ -218,7 +218,7 @@ export function DetalleFoto({ foto, contexto, alCerrar, alCambiarFoto }: Props) 
                 {CATEGORIAS.map((c) => (
                   <option key={c.id} value={c.id}>{c.emoji} {c.nombre}</option>
                 ))}
-                <option value={NO_MANUALIDAD}>🚫 No es una manualidad</option>
+                <option value={NO_MANUALIDAD}>🚫 No entra en el catálogo</option>
               </select>
               {foto.categoriaAlternativa && (
                 <span className="campo__ayuda">
@@ -326,10 +326,7 @@ export function DetalleFoto({ foto, contexto, alCerrar, alCambiarFoto }: Props) 
                 onClick={() =>
                   conAccion(async () => {
                     await guardar();
-                    const resultado = await compartirFotos([foto]);
-                    if (resultado === 'descargado') {
-                      avisar('Este dispositivo no permite compartir archivos: la foto se ha descargado.');
-                    }
+                    pedirCompartir([foto]);
                   })
                 }
               >

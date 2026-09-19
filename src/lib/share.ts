@@ -1,9 +1,14 @@
 import type { Foto } from '../types';
-import { categoria } from '../taxonomy';
+import { categoria, esActividad } from '../taxonomy';
 import { obtenerCompleta } from './db';
 import { nombreArchivo } from './naming';
 
-export type ResultadoCompartir = 'compartido' | 'cancelado' | 'descargado';
+export type ResultadoCompartir = 'compartido' | 'cancelado' | 'no-soportado';
+
+export interface OpcionesCompartir {
+  /** `false` envía solo las imágenes, sin nombre ni ficha como texto. */
+  conFicha: boolean;
+}
 
 /** ¿Puede este dispositivo abrir el menú de compartir con archivos adjuntos? */
 export function puedeCompartirArchivos(): boolean {
@@ -35,49 +40,62 @@ async function comoArchivos(fotos: Foto[]): Promise<File[]> {
   return archivos;
 }
 
-function textoDeCompartir(fotos: Foto[]): { titulo: string; texto: string } {
+export function textoDeCompartir(fotos: Foto[]): { title: string; text: string } {
   if (fotos.length === 1) {
     const foto = fotos[0];
     const cat = categoria(foto.categoria);
     const partes = [foto.nombre, `${cat.emoji} ${cat.nombre}`];
-    if (foto.tecnica) partes.push(`Técnica: ${foto.tecnica}`);
+    if (foto.tecnica) partes.push(`${esActividad(foto.categoria) ? 'Escena' : 'Técnica'}: ${foto.tecnica}`);
     if (foto.materiales.length) partes.push(`Materiales: ${foto.materiales.join(', ')}`);
-    return { titulo: foto.nombre, texto: partes.join('\n') };
+    return { title: foto.nombre, text: partes.join('\n') };
   }
 
   const categorias = [...new Set(fotos.map((f) => categoria(f.categoria).nombre))];
   return {
-    titulo: `${fotos.length} manualidades`,
-    texto: `${fotos.length} fotos — ${categorias.join(', ')}`,
+    title: `${fotos.length} fotos de Arima`,
+    text: `${fotos.length} fotos — ${categorias.join(', ')}`,
   };
 }
 
 /**
  * Abre el menú de compartir del sistema con las fotos adjuntas.
- * Si el dispositivo no lo admite, las descarga: el resultado dice qué ha pasado
- * para que la interfaz pueda explicarlo.
+ *
+ * Devuelve `no-soportado` cuando el dispositivo no puede compartir archivos, en
+ * vez de descargarlos por su cuenta: qué hacer entonces (descargar una a una o
+ * generar un ZIP) depende de cuántas sean, y esa decisión es de la interfaz.
  */
-export async function compartirFotos(fotos: Foto[]): Promise<ResultadoCompartir> {
+export async function compartirFotos(
+  fotos: Foto[],
+  opciones: OpcionesCompartir,
+): Promise<ResultadoCompartir> {
   if (!fotos.length) return 'cancelado';
 
   const archivos = await comoArchivos(fotos);
   if (!archivos.length) throw new Error('No se han encontrado las imágenes en este dispositivo.');
 
-  const { titulo, texto } = textoDeCompartir(fotos);
+  if (!navigator.share || !navigator.canShare?.({ files: archivos })) return 'no-soportado';
 
-  if (navigator.canShare?.({ files: archivos }) && navigator.share) {
-    try {
-      await navigator.share({ files: archivos, title: titulo, text: texto });
-      return 'compartido';
-    } catch (error) {
-      // `AbortError` = la persona ha cerrado el menú. No es un fallo.
-      if (error instanceof DOMException && error.name === 'AbortError') return 'cancelado';
-      // Cualquier otro problema: seguimos por la vía de la descarga.
-    }
+  // Sin ficha se envían solo los archivos: ni título ni texto, para que en
+  // WhatsApp o el correo no aparezca ningún mensaje escrito por la app.
+  const carga: ShareData = opciones.conFicha
+    ? { files: archivos, ...textoDeCompartir(fotos) }
+    : { files: archivos };
+
+  try {
+    await navigator.share(carga);
+    return 'compartido';
+  } catch (error) {
+    // `AbortError` = la persona ha cerrado el menú. No es un fallo.
+    if (error instanceof DOMException && error.name === 'AbortError') return 'cancelado';
+    return 'no-soportado';
   }
+}
 
+/** Descarga las fotos una a una. Reserva para cuando no se puede compartir. */
+export async function descargarFotos(fotos: Foto[]): Promise<number> {
+  const archivos = await comoArchivos(fotos);
   for (const archivo of archivos) descargarBlob(archivo, archivo.name);
-  return 'descargado';
+  return archivos.length;
 }
 
 export function descargarBlob(blob: Blob, nombre: string): void {

@@ -51,7 +51,7 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
               </button>
             }
           >
-            Analiza las fotos para que la app decida cuáles son manualidades y de qué tipo.
+            Analiza las fotos para que la app decida cuáles entran en el catálogo y en qué categoría.
           </Vacio>
         ) : saltadas.size > 0 ? (
           <Vacio
@@ -110,7 +110,7 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
     const actualizada: Foto = {
       ...actual,
       categoria: categoriaFinal,
-      esManualidad: !esDescarte,
+      entraEnCatalogo: !esDescarte,
       revision: esDescarte ? 'descartada' : 'confirmada',
       confianza: 1,
       motor: 'manual',
@@ -166,7 +166,7 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
         </button>
         <button type="button" className="boton boton--peligro" onClick={() => void decidir(null)}>
           <IconoVeto className="boton__icono" />
-          No es una manualidad
+          No entra en el catálogo
         </button>
       </div>
 
@@ -181,7 +181,7 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
         </button>
       </div>
 
-      <h3 style={{ marginBottom: 8 }}>Tipo de manualidad</h3>
+      <h3 style={{ marginBottom: 8 }}>Categoría</h3>
       <div className="rejilla-categorias">
         {CATEGORIAS.map((c) => (
           <button

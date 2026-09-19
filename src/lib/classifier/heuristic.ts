@@ -177,7 +177,7 @@ export async function clasificarEnLocal(
   if (stats.coloresUnicos < 60 && stats.proporcionPlana > 0.6) {
     return {
       ...base,
-      esManualidad: false,
+      entraEnCatalogo: false,
       confianza: 0.72,
       categoria: NO_MANUALIDAD,
       motivo: 'Parece una captura de pantalla: pocos colores y zonas planas.',
@@ -188,7 +188,7 @@ export async function clasificarEnLocal(
   if (stats.brillo > 0.82 && stats.saturacion < 0.12 && stats.densidadBordes > 0.08) {
     return {
       ...base,
-      esManualidad: false,
+      entraEnCatalogo: false,
       confianza: 0.66,
       categoria: NO_MANUALIDAD,
       motivo: 'Parece un documento o un texto sobre fondo claro.',
@@ -199,7 +199,7 @@ export async function clasificarEnLocal(
   if (stats.densidadBordes < 0.015 && stats.coloresUnicos < 25) {
     return {
       ...base,
-      esManualidad: false,
+      entraEnCatalogo: false,
       confianza: 0.6,
       categoria: NO_MANUALIDAD,
       motivo: 'La imagen casi no tiene detalle (muy oscura, velada o desenfocada).',
@@ -210,7 +210,7 @@ export async function clasificarEnLocal(
   if (porNombre) {
     return {
       ...base,
-      esManualidad: true,
+      entraEnCatalogo: true,
       // Nunca llega al umbral por defecto: es una pista, no un veredicto.
       confianza: 0.5,
       categoria: porNombre.categoria,
@@ -221,7 +221,7 @@ export async function clasificarEnLocal(
 
   return {
     ...base,
-    esManualidad: true,
+    entraEnCatalogo: true,
     confianza: 0.25,
     categoria: SIN_CLASIFICAR,
     motivo: 'Sin conexión con el modelo no se puede identificar la técnica: pendiente de revisión.',

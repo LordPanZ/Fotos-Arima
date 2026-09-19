@@ -8,32 +8,57 @@ import { aBase64, reescalar } from '../image';
 const VALORES_CATEGORIA: [string, ...string[]] = [NO_MANUALIDAD, ...IDS_CATEGORIAS];
 
 const EsquemaClasificacion = z.object({
-  es_manualidad: z
+  entra_en_catalogo: z
     .boolean()
-    .describe('true solo si la foto muestra una manualidad, su proceso o sus materiales.'),
+    .describe(
+      'true si la foto muestra una manualidad (pieza, proceso o materiales) o una actividad de Arima ' +
+        '(Diskofesta o Ihes Gela). false en cualquier otro caso.',
+    ),
   confianza: z
     .number()
     .describe('Seguridad de la decisión anterior, de 0 a 1. Calibrada, no optimista.'),
   categoria: z
     .enum(VALORES_CATEGORIA)
-    .describe('Identificador exacto de la categoría, o "no-manualidad".'),
+    .describe('Identificador exacto de la categoría, o "no-manualidad" si no entra en el catálogo.'),
   categoria_alternativa: z
     .enum(VALORES_CATEGORIA)
     .nullable()
     .describe('Segunda opción si la pieza podría encajar en otra categoría; si no, null.'),
-  tecnica: z.string().describe('Técnica concreta en español, 1-4 palabras. Cadena vacía si no se aprecia.'),
-  materiales: z.array(z.string()).describe('Hasta 4 materiales visibles, en español y en minúsculas.'),
+  tecnica: z
+    .string()
+    .describe(
+      'Para una manualidad, la técnica concreta en español (1-4 palabras). Para una actividad, el momento ' +
+        'o la escena («pista de baile», «resolviendo el candado»). Cadena vacía si no se aprecia.',
+    ),
+  materiales: z
+    .array(z.string())
+    .describe(
+      'Hasta 4 materiales visibles en una manualidad, o elementos destacados de la escena en una ' +
+        'actividad, en español y en minúsculas.',
+    ),
   colores: z.array(z.string()).describe('Hasta 3 colores dominantes, en español y en minúsculas.'),
   etiquetas: z.array(z.string()).describe('Hasta 6 etiquetas de búsqueda en español, en minúsculas.'),
   descripcion: z
     .string()
-    .describe('Descripción de la pieza en 3-6 palabras, en español, sin punto final. Va en el nombre del archivo.'),
+    .describe(
+      'Descripción de la pieza o de la escena en 3-6 palabras, en español, sin punto final. ' +
+        'Va en el nombre del archivo.',
+    ),
   motivo: z.string().describe('Una frase explicando la decisión.'),
 });
 
-const INSTRUCCIONES = `Eres el catalogador de un archivo de fotografías de manualidades. Tu trabajo tiene dos partes: decidir si la foto entra en el catálogo y, si entra, clasificarla por tipo de manualidad.
+const INSTRUCCIONES = `Eres el catalogador del archivo fotográfico de Arima. Tu trabajo tiene dos partes: decidir si la foto entra en el catálogo y, si entra, clasificarla.
 
-ENTRA EN EL CATÁLOGO (es_manualidad = true):
+El catálogo recoge DOS COSAS DISTINTAS:
+
+A) MANUALIDADES — piezas hechas a mano y su proceso.
+B) ACTIVIDADES DE ARIMA — dos actividades concretas, que no son manualidades pero también se catalogan:
+   · Diskofesta: la fiesta con música y baile.
+   · Ihes Gela: la sala de escape (escape room).
+
+ENTRA EN EL CATÁLOGO (entra_en_catalogo = true) si se cumple A o B.
+
+A) Cuenta como manualidad:
 - Una pieza artesanal terminada, hecha a mano.
 - Una labor a medio hacer, con la pieza reconocible.
 - Materiales o herramientas preparados para trabajar, o una mesa de taller en uso.
@@ -41,33 +66,55 @@ ENTRA EN EL CATÁLOGO (es_manualidad = true):
 - Una persona sosteniendo o luciendo una pieza hecha a mano, cuando la pieza es el asunto de la foto.
 - Un puesto, expositor o mesa con varias piezas artesanales.
 
-NO ENTRA (es_manualidad = false, categoria = "no-manualidad"):
-- Retratos, selfies y fotos de grupo donde no se ve ninguna pieza hecha a mano.
+B) Cuenta como actividad:
+- Diskofesta: pista de baile, bola de espejos, luces de colores, humo o confeti, DJ o equipo de sonido,
+  grupos bailando, photocall de fiesta, complementos de disco (gafas, pelucas, luminosos).
+- Ihes Gela: sala temática decorada, candados y cerraduras, cofres o cajas con clave, pistas, acertijos,
+  mapas, linternas, cuenta atrás, grupos resolviendo enigmas dentro de la sala.
+- En las actividades SÍ se cataloga a la gente participando: aquí el asunto de la foto es la escena, no un objeto.
+
+NO ENTRA (entra_en_catalogo = false, categoria = "no-manualidad"):
+- Retratos, selfies y fotos de grupo posando fuera de una actividad, sin pieza ni escena reconocible.
 - Paisajes, edificios, viajes, animales y plantas sin intervención artesanal.
 - Comida y recetas. La repostería no es una manualidad en este catálogo.
 - Capturas de pantalla, documentos, tickets, facturas, carteles de texto, memes e imágenes descargadas.
 - Productos industriales o comprados en una tienda, escaparates y catálogos.
 - Interiores y muebles de serie sin ninguna pieza artesanal destacada.
+- Una fiesta o un local cualquiera que no sea reconociblemente una Diskofesta o una Ihes Gela.
 - Fotos tan borrosas, oscuras o desenfocadas que no permiten identificar nada.
 
+CÓMO DISTINGUIR LAS DOS ACTIVIDADES:
+- Diskofesta es luz, color, música y movimiento: se baila.
+- Ihes Gela es una sala cerrada con objetos que esconden un enigma: se resuelve.
+- Si hay una manualidad hecha DURANTE una actividad y la pieza es el asunto de la foto, clasifícala por su
+  técnica y pon la actividad en "categoria_alternativa".
+
 CÓMO CALIBRAR LA CONFIANZA:
-- 0.90-1.00: es inequívoco, la pieza se ve con claridad y la categoría no admite duda.
-- 0.65-0.89: se ve la pieza pero hay algo de ambigüedad (encuadre parcial, poca luz, categoría discutible).
-- 0.40-0.64: podría serlo o no. Ejemplos típicos: un retrato con una pieza pequeña al fondo, un objeto que igual está comprado, una foto muy recortada.
-- 0.00-0.39: casi con seguridad no es una manualidad.
-No infles la confianza: por debajo del umbral la foto pasa a revisión manual, que es exactamente donde deben acabar las dudosas.
+- 0.90-1.00: es inequívoco, se ve con claridad y la categoría no admite duda.
+- 0.65-0.89: se reconoce pero hay algo de ambigüedad (encuadre parcial, poca luz, categoría discutible).
+- 0.40-0.64: podría serlo o no. Ejemplos típicos: un retrato con una pieza pequeña al fondo, una fiesta que
+  no se distingue de una Diskofesta, una sala decorada que quizá no sea una Ihes Gela.
+- 0.00-0.39: casi con seguridad no entra en el catálogo.
+No infles la confianza: por debajo del umbral la foto pasa a revisión manual, que es exactamente donde deben
+acabar las dudosas.
 
 CATEGORÍAS DISPONIBLES (usa el identificador exacto):
 ${taxonomiaParaPrompt()}
 
 REGLAS DE CATEGORÍA:
-- Elige la categoría por la técnica dominante, no por el motivo representado. Un ángel de ganchillo es "ganchillo-punto", no "navidad-estacional".
-- "navidad-estacional", "fiesta-eventos" e "infantil-escolar" solo cuando el contexto de la celebración o del trabajo escolar pesa más que la técnica.
+- En manualidades, elige por la técnica dominante, no por el motivo representado. Un ángel de ganchillo es
+  "ganchillo-punto", no "navidad-estacional".
+- "navidad-estacional", "fiesta-eventos" e "infantil-escolar" solo cuando el contexto de la celebración o del
+  trabajo escolar pesa más que la técnica. Ojo: una Diskofesta va en "diskofesta", nunca en "fiesta-eventos",
+  que es para la decoración hecha a mano de una celebración.
 - Usa "otras-manualidades" únicamente si es claramente artesanía hecha a mano y ninguna categoría encaja.
-- Rellena "categoria_alternativa" siempre que la pieza pudiera clasificarse razonablemente en otra categoría.
+- Rellena "categoria_alternativa" siempre que pudiera clasificarse razonablemente en otra categoría.
 
 LA DESCRIPCIÓN:
-Se usará como nombre del archivo, así que escribe un sintagma nominal breve y concreto en español: "colgante de pared beige", "tazas esmaltadas en azul", "guirnalda de flores de papel". Nada de frases completas, comillas ni punto final. Si no es una manualidad, describe brevemente lo que sí se ve.`;
+Se usará como nombre del archivo, así que escribe un sintagma nominal breve y concreto en español:
+"colgante de pared beige", "tazas esmaltadas en azul", "pista de baile con confeti", "abriendo el cofre con
+la clave". Nada de frases completas, comillas ni punto final. Si no entra en el catálogo, describe
+brevemente lo que sí se ve.`;
 
 const ESFUERZO: Record<Ajustes['precision'], 'low' | 'medium' | 'high'> = {
   rapida: 'low',
@@ -144,13 +191,13 @@ export async function clasificarConIA(
     throw new Error('La respuesta del modelo no se ha podido interpretar. Reinténtalo.');
   }
 
-  const esManualidad = ficha.es_manualidad && ficha.categoria !== NO_MANUALIDAD;
+  const entraEnCatalogo = ficha.entra_en_catalogo && ficha.categoria !== NO_MANUALIDAD;
   const confianza = Math.min(1, Math.max(0, Number(ficha.confianza) || 0));
 
   return {
-    esManualidad,
+    entraEnCatalogo,
     confianza,
-    categoria: esManualidad ? ficha.categoria : NO_MANUALIDAD,
+    categoria: entraEnCatalogo ? ficha.categoria : NO_MANUALIDAD,
     categoriaAlternativa:
       ficha.categoria_alternativa && ficha.categoria_alternativa !== ficha.categoria
         ? ficha.categoria_alternativa

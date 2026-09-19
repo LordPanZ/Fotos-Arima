@@ -3,14 +3,13 @@ import type { Foto } from '../types';
 import { CATEGORIAS, NO_MANUALIDAD, SIN_CLASIFICAR, categoria } from '../taxonomy';
 import { estaEnCatalogo, necesitaRevision } from '../lib/classifier';
 import { exportarZip } from '../lib/exportZip';
-import { compartirFotos } from '../lib/share';
 import { useTienda } from '../state/store';
 import { DetalleFoto } from '../components/DetalleFoto';
 import { Rejilla } from '../components/Galeria';
 import { BarraProgreso, Vacio } from '../components/comunes';
 import {
-  IconoBuscar, IconoChispa, IconoCompartir, IconoDescargar, IconoEstrella,
-  IconoLapiz, IconoPapelera,
+  IconoBuscar, IconoChispa, IconoCompartir, IconoComprobado, IconoDescargar,
+  IconoEstrella, IconoLapiz, IconoPapelera,
 } from '../components/Icons';
 
 type Vista = 'catalogo' | 'revisar' | 'descartadas' | 'favoritas' | 'todas';
@@ -86,6 +85,9 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
   // Se busca en todas las fotos, no solo en las visibles: si al editarla deja
   // de encajar con el filtro o la búsqueda, la hoja sigue abierta en vez de
   // desaparecer a media edición.
+  const todasElegidas =
+    visibles.length > 0 && visibles.every((f) => seleccion.has(f.id));
+
   const fotoAbierta = abierta ? fotos.find((f) => f.id === abierta) ?? null : null;
 
   const conAccion = async (accion: () => Promise<void>) => {
@@ -144,7 +146,7 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
       </div>
 
       {cuentas.size > 1 && (
-        <div className="filtros filtros--desplazable" role="group" aria-label="Filtrar por tipo de manualidad">
+        <div className="filtros filtros--desplazable" role="group" aria-label="Filtrar por categoría">
           <button
             type="button"
             className="filtro"
@@ -174,25 +176,45 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
         </div>
       )}
 
+      {visibles.length > 1 && elegidas.length === 0 && (
+        <div className="acciones-lista">
+          <button
+            type="button"
+            className="boton boton--fantasma boton--pequeno"
+            onClick={() => tienda.seleccionar(visibles.map((f) => f.id))}
+          >
+            <IconoComprobado className="boton__icono" />
+            Seleccionar las {visibles.length}
+          </button>
+          <span className="acciones-lista__ayuda">
+            Selecciona varias para compartirlas o exportarlas juntas.
+          </span>
+        </div>
+      )}
+
       {elegidas.length > 0 && (
         <div className="seleccion-barra">
           <span className="seleccion-barra__cuenta">{elegidas.length} seleccionadas</span>
+
+          {!todasElegidas && (
+            <button
+              type="button"
+              className="boton boton--pequeno boton--fantasma"
+              onClick={() => tienda.seleccionar(visibles.map((f) => f.id))}
+            >
+              <IconoComprobado className="boton__icono" />
+              Seleccionar las {visibles.length}
+            </button>
+          )}
 
           <button
             type="button"
             className="boton boton--pequeno boton--primario"
             disabled={ocupado}
-            onClick={() =>
-              conAccion(async () => {
-                const resultado = await compartirFotos(elegidas);
-                if (resultado === 'descargado') {
-                  tienda.avisar('Este dispositivo no permite compartir varios archivos: se han descargado.');
-                }
-              })
-            }
+            onClick={() => tienda.pedirCompartir(elegidas)}
           >
             <IconoCompartir className="boton__icono" />
-            Compartir
+            Compartir {elegidas.length > 1 ? `las ${elegidas.length}` : ''}
           </button>
 
           <button
@@ -230,7 +252,7 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
             className="seleccion"
             style={{ width: 'auto', maxWidth: 210 }}
             value=""
-            aria-label="Mover la selección a otro tipo de manualidad"
+            aria-label="Mover la selección a otra categoría"
             onChange={(e) => {
               const destino = e.target.value;
               if (!destino) return;
@@ -240,7 +262,7 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
                   elegidas.map((foto) => ({
                     ...foto,
                     categoria: destino,
-                    esManualidad: destino !== NO_MANUALIDAD,
+                    entraEnCatalogo: destino !== NO_MANUALIDAD,
                     revision: destino === NO_MANUALIDAD ? 'descartada' : 'confirmada',
                     motor: 'manual',
                     confianza: 1,
@@ -254,7 +276,7 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
             {CATEGORIAS.map((c) => (
               <option key={c.id} value={c.id}>{c.emoji} {c.nombre}</option>
             ))}
-            <option value={NO_MANUALIDAD}>🚫 No es una manualidad</option>
+            <option value={NO_MANUALIDAD}>🚫 No entra en el catálogo</option>
           </select>
 
           <button

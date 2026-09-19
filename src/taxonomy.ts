@@ -1,10 +1,17 @@
 /**
- * Taxonomía de tipos de manualidad.
+ * Taxonomía del catálogo.
  *
- * Es la referencia única para: el clasificador (los `id` son los valores que
+ * Recoge dos cosas distintas: los tipos de manualidad y las actividades de
+ * Arima (Diskofesta e Ihes Gela). El campo `familia` las separa, porque el
+ * clasificador necesita reglas propias para cada una: una manualidad se
+ * reconoce por la técnica, y una actividad por la escena.
+ *
+ * Es la referencia única para el clasificador (los `id` son los valores que
  * puede devolver el modelo), el agrupado de la galería y la plantilla de
  * nombres. Añadir una categoría aquí la propaga a toda la aplicación.
  */
+
+export type Familia = 'manualidad' | 'actividad';
 
 export interface Categoria {
   id: string;
@@ -16,6 +23,8 @@ export interface Categoria {
   color: string;
   /** Palabras clave para búsqueda local y para el clasificador heurístico. */
   sinonimos: string[];
+  /** `actividad` para lo que no es una pieza hecha a mano. */
+  familia: Familia;
 }
 
 export const SIN_CLASIFICAR = 'sin-clasificar';
@@ -30,6 +39,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🧶',
     color: '#c2554a',
     sinonimos: ['ganchillo', 'crochet', 'punto', 'tricot', 'amigurumi', 'lana', 'ovillo', 'tejido', 'agujas', 'granny'],
+    familia: 'manualidad',
   },
   {
     id: 'costura-textil',
@@ -39,6 +49,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🧵',
     color: '#b5548c',
     sinonimos: ['costura', 'coser', 'patchwork', 'fieltro', 'bordado', 'punto de cruz', 'tela', 'maquina de coser', 'quilt', 'acolchado'],
+    familia: 'manualidad',
   },
   {
     id: 'macrame-fibras',
@@ -48,6 +59,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🪢',
     color: '#a8763f',
     sinonimos: ['macrame', 'nudos', 'cesteria', 'mimbre', 'rafia', 'esparto', 'telar', 'tapiz', 'atrapasuenos', 'cuerda', 'yute'],
+    familia: 'manualidad',
   },
   {
     id: 'ceramica-arcilla',
@@ -57,6 +69,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🏺',
     color: '#9a6b4f',
     sinonimos: ['ceramica', 'arcilla', 'barro', 'torno', 'porcelana fria', 'fimo', 'polimerica', 'modelado', 'esmalte', 'alfareria', 'pasta'],
+    familia: 'manualidad',
   },
   {
     id: 'pintura-dibujo',
@@ -66,6 +79,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🎨',
     color: '#4a7fb5',
     sinonimos: ['pintura', 'pintar', 'acuarela', 'acrilico', 'lienzo', 'mandala', 'lettering', 'caligrafia', 'dibujo', 'pincel', 'oleo', 'piedras pintadas'],
+    familia: 'manualidad',
   },
   {
     id: 'papel-carton',
@@ -75,6 +89,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '📄',
     color: '#5d8f6f',
     sinonimos: ['papel', 'carton', 'origami', 'papiroflexia', 'scrapbook', 'quilling', 'cartonaje', 'tarjeta', 'papel mache', 'recorte', 'album'],
+    familia: 'manualidad',
   },
   {
     id: 'madera-carpinteria',
@@ -84,6 +99,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🪵',
     color: '#8a6a3d',
     sinonimos: ['madera', 'carpinteria', 'pirograbado', 'talla', 'marqueteria', 'pale', 'sierra', 'lija', 'bricolaje', 'caja de madera'],
+    familia: 'manualidad',
   },
   {
     id: 'joyeria-abalorios',
@@ -93,6 +109,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '💍',
     color: '#8b6bb5',
     sinonimos: ['joyeria', 'bisuteria', 'abalorio', 'cuentas', 'alambre', 'pendientes', 'collar', 'pulsera', 'anillo', 'mostacilla'],
+    familia: 'manualidad',
   },
   {
     id: 'velas-jabones',
@@ -102,6 +119,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🕯️',
     color: '#c08a3e',
     sinonimos: ['vela', 'cera', 'jabon', 'saponificacion', 'bomba de bano', 'aroma', 'parafina', 'soja'],
+    familia: 'manualidad',
   },
   {
     id: 'resina-epoxi',
@@ -111,6 +129,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '💎',
     color: '#3f8f9a',
     sinonimos: ['resina', 'epoxi', 'molde', 'silicona', 'posavasos', 'inclusion', 'geode'],
+    familia: 'manualidad',
   },
   {
     id: 'mosaico-vidrio',
@@ -120,6 +139,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🔷',
     color: '#4f6fb5',
     sinonimos: ['mosaico', 'tesela', 'vidriera', 'vidrio', 'cristal', 'fusing', 'gresite', 'tiffany'],
+    familia: 'manualidad',
   },
   {
     id: 'reciclaje-upcycling',
@@ -129,6 +149,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '♻️',
     color: '#5f9b4a',
     sinonimos: ['reciclaje', 'reciclado', 'upcycling', 'reutilizar', 'bote', 'botella', 'tapon', 'capsula', 'restauracion', 'transformar'],
+    familia: 'manualidad',
   },
   {
     id: 'decoracion-hogar',
@@ -138,6 +159,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🖼️',
     color: '#b57f4a',
     sinonimos: ['decoracion', 'corona', 'centro de mesa', 'portavelas', 'cuadro', 'letrero', 'guirnalda', 'adorno', 'jarron'],
+    familia: 'manualidad',
   },
   {
     id: 'fiesta-eventos',
@@ -147,6 +169,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🎉',
     color: '#c2568f',
     sinonimos: ['fiesta', 'cumpleanos', 'boda', 'pinata', 'photocall', 'banderin', 'invitados', 'celebracion', 'evento'],
+    familia: 'manualidad',
   },
   {
     id: 'navidad-estacional',
@@ -156,6 +179,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🎄',
     color: '#4a8f6a',
     sinonimos: ['navidad', 'navideno', 'halloween', 'pascua', 'belen', 'adviento', 'calabaza', 'huevo', 'otono', 'adorno navideno'],
+    familia: 'manualidad',
   },
   {
     id: 'infantil-escolar',
@@ -165,6 +189,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🧒',
     color: '#c29a3e',
     sinonimos: ['infantil', 'ninos', 'colegio', 'escolar', 'plastilina', 'goma eva', 'disfraz', 'manualidad infantil', 'pompones'],
+    familia: 'manualidad',
   },
   {
     id: 'flores-naturaleza',
@@ -174,6 +199,7 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '🌿',
     color: '#679b55',
     sinonimos: ['flores', 'flor', 'seca', 'prensada', 'terrario', 'ramo', 'arreglo floral', 'hojas', 'suculenta'],
+    familia: 'manualidad',
   },
   {
     id: 'otras-manualidades',
@@ -183,6 +209,30 @@ export const CATEGORIAS: Categoria[] = [
     emoji: '✨',
     color: '#7c7c8a',
     sinonimos: ['manualidad', 'artesania', 'handmade', 'hecho a mano', 'diy'],
+    familia: 'manualidad',
+  },
+
+  {
+    id: 'diskofesta',
+    nombre: 'Diskofesta',
+    definicion:
+      'Fiesta con música y baile: pista de baile, bola de espejos, luces de colores, cañón de humo o confeti, ' +
+      'DJ o equipo de sonido, grupos bailando, photocall de fiesta, gafas y complementos de disco.',
+    emoji: '🪩',
+    color: '#8e44c9',
+    sinonimos: ['diskofesta', 'disko', 'disco', 'fiesta', 'baile', 'bailar', 'dj', 'musica', 'bola de espejos', 'luces', 'confeti', 'pista de baile'],
+    familia: 'actividad',
+  },
+  {
+    id: 'ihes-gela',
+    nombre: 'Ihes Gela',
+    definicion:
+      'Sala de escape (escape room): sala temática decorada, candados y cerraduras, cofres y cajas con clave, ' +
+      'pistas, acertijos y mapas, linternas, cuenta atrás, grupos resolviendo enigmas dentro de la sala.',
+    emoji: '🗝️',
+    color: '#2f7d8c',
+    sinonimos: ['ihes gela', 'ihesgela', 'ihes', 'escape', 'escape room', 'sala de escape', 'candado', 'cofre', 'pista', 'enigma', 'acertijo', 'cerradura'],
+    familia: 'actividad',
   },
 ];
 
@@ -195,14 +245,16 @@ export const CATEGORIAS_ESPECIALES: Record<string, Categoria> = {
     emoji: '⏳',
     color: '#8a8a8a',
     sinonimos: [],
+    familia: 'manualidad',
   },
   [NO_MANUALIDAD]: {
     id: NO_MANUALIDAD,
-    nombre: 'Descartadas (no son manualidades)',
-    definicion: 'La foto no muestra ninguna manualidad.',
+    nombre: 'Descartadas (fuera del catálogo)',
+    definicion: 'La foto no muestra ni una manualidad ni una actividad de Arima.',
     emoji: '🚫',
     color: '#8a8a8a',
     sinonimos: [],
+    familia: 'manualidad',
   },
 };
 
@@ -217,7 +269,15 @@ export function categoria(id: string | null | undefined): Categoria {
 
 export const IDS_CATEGORIAS = CATEGORIAS.map((c) => c.id);
 
+export const CATEGORIAS_MANUALIDAD = CATEGORIAS.filter((c) => c.familia === 'manualidad');
+export const CATEGORIAS_ACTIVIDAD = CATEGORIAS.filter((c) => c.familia === 'actividad');
+
 /** Listado compacto que se le pasa al modelo dentro del prompt. */
-export function taxonomiaParaPrompt(): string {
-  return CATEGORIAS.map((c) => `- ${c.id}: ${c.nombre}. ${c.definicion}`).join('\n');
+export function taxonomiaParaPrompt(familia?: Familia): string {
+  const lista = familia ? CATEGORIAS.filter((c) => c.familia === familia) : CATEGORIAS;
+  return lista.map((c) => `- ${c.id}: ${c.nombre}. ${c.definicion}`).join('\n');
+}
+
+export function esActividad(id: string): boolean {
+  return categoria(id).familia === 'actividad';
 }

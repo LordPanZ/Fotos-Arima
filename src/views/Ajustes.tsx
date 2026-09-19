@@ -45,7 +45,7 @@ export function Ajustes() {
           id: 'x', origen: 'local', archivoOriginal: 'IMG_2043.jpg', nombre: '', nombreEditado: false,
           tipoMime: 'image/jpeg', ancho: 0, alto: 0, bytes: 0,
           fecha: '2024-05-12T10:00:00.000Z', importadaEl: '', estado: 'listo',
-          esManualidad: true, confianza: 0.9, categoria: 'macrame-fibras',
+          entraEnCatalogo: true, confianza: 0.9, categoria: 'macrame-fibras',
           tecnica: 'nudo plano', materiales: ['algodón'], colores: ['beige'],
           etiquetas: [], descripcion: 'colgante de pared', motor: 'ia',
           revision: 'auto', favorita: false,
@@ -95,7 +95,8 @@ export function Ajustes() {
         </div>
         <p className="tarjeta__ayuda">
           Con una clave de la API de Claude cada foto se analiza con un modelo de visión: es lo que
-          permite distinguir ganchillo de macramé o descartar lo que no es una manualidad. Sin
+          permite distinguir ganchillo de macramé, reconocer una Diskofesta o una Ihes Gela, y descartar
+          lo que no es ninguna de las dos cosas. Sin
           clave, la app solo hace un filtrado local básico y manda casi todo a revisión.
         </p>
 
@@ -216,7 +217,7 @@ export function Ajustes() {
         {!hayClaveIA(borrador) && (
           <AvisoLinea>
             Sin clave de API la clasificación es solo local: descarta capturas y documentos, pero no
-            distingue tipos de manualidad. Todo lo demás acabará en «Por revisar».
+            distingue categorías. Todo lo demás acabará en «Por revisar».
           </AvisoLinea>
         )}
       </div>

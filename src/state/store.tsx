@@ -27,6 +27,8 @@ interface Estado {
   progreso: ProgresoAnalisis;
   seleccion: Set<string>;
   avisos: Aviso[];
+  /** Fotos en espera de que se elija cómo compartirlas. */
+  compartiendo: Foto[] | null;
 }
 
 interface Acciones {
@@ -47,6 +49,9 @@ interface Acciones {
   alternarSeleccion(id: string): void;
   seleccionar(ids: string[]): void;
   limpiarSeleccion(): void;
+
+  pedirCompartir(fotos: Foto[]): void;
+  cerrarCompartir(): void;
 }
 
 type Contexto = Estado & Acciones;
@@ -62,6 +67,7 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
   const [progreso, setProgreso] = useState<ProgresoAnalisis>(PROGRESO_INACTIVO);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [compartiendo, setCompartiendo] = useState<Foto[] | null>(null);
 
   const abortador = useRef<AbortController | null>(null);
   const siguienteAviso = useRef(1);
@@ -220,18 +226,24 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
   const seleccionar = useCallback((ids: string[]) => setSeleccion(new Set(ids)), []);
   const limpiarSeleccion = useCallback(() => setSeleccion(new Set()), []);
 
+  const pedirCompartir = useCallback(
+    (objetivo: Foto[]) => setCompartiendo(objetivo.length ? objetivo : null),
+    [],
+  );
+  const cerrarCompartir = useCallback(() => setCompartiendo(null), []);
+
   const valor = useMemo<Contexto>(
     () => ({
-      cargando, fotos, ajustes, progreso, seleccion, avisos,
+      cargando, fotos, ajustes, progreso, seleccion, avisos, compartiendo,
       avisar, cerrarAviso, recargar, anadirFotos, actualizarFoto, actualizarFotos,
       eliminarFotos, guardarAjustes, analizar, cancelarAnalisis, renombrarConPlantilla,
-      alternarSeleccion, seleccionar, limpiarSeleccion,
+      alternarSeleccion, seleccionar, limpiarSeleccion, pedirCompartir, cerrarCompartir,
     }),
     [
-      cargando, fotos, ajustes, progreso, seleccion, avisos,
+      cargando, fotos, ajustes, progreso, seleccion, avisos, compartiendo,
       avisar, cerrarAviso, recargar, anadirFotos, actualizarFoto, actualizarFotos,
       eliminarFotos, guardarAjustes, analizar, cancelarAnalisis, renombrarConPlantilla,
-      alternarSeleccion, seleccionar, limpiarSeleccion,
+      alternarSeleccion, seleccionar, limpiarSeleccion, pedirCompartir, cerrarCompartir,
     ],
   );
 

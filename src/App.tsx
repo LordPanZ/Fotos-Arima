@@ -6,6 +6,7 @@ import { Importar } from './views/Importar';
 import { Revisar } from './views/Revisar';
 import { Ajustes } from './views/Ajustes';
 import { Avisos, Cargando } from './components/comunes';
+import { DialogoCompartir } from './components/DialogoCompartir';
 import {
   IconoAjustes, IconoBiblioteca, IconoImportar, IconoInstalar, IconoLogo, IconoRevisar,
 } from './components/Icons';
@@ -116,10 +117,9 @@ function Interfaz() {
                 : undefined
             }
             onClick={() => ir(id)}
-            style={{ position: 'relative' }}
           >
             <Icono className="nav__icono" />
-            {nombre}
+            <span className="nav__texto">{nombre}</span>
             {id === 'revisar' && porRevisar > 0 && (
               <span className="nav__pastilla" aria-hidden="true">
                 {porRevisar > 99 ? '99+' : porRevisar}
@@ -174,6 +174,7 @@ function Interfaz() {
         )}
       </main>
 
+      <DialogoCompartir />
       <Avisos />
     </div>
   );

@@ -165,6 +165,13 @@ try {
   await pagina.waitForSelector('.revision__marco img', { timeout: 15000 });
   comprobar('La vista de revisión muestra la foto', await pagina.locator('.revision__marco img').isVisible());
 
+  for (const nueva of ['Diskofesta', 'Ihes Gela']) {
+    comprobar(
+      `«${nueva}» aparece como categoría`,
+      await pagina.getByRole('button', { name: nueva, exact: true }).isVisible(),
+    );
+  }
+
   await pagina.getByRole('button', { name: 'Macramé y fibras', exact: true }).click();
   await pagina.getByRole('button', { name: /^Sí: Macramé y fibras$/ }).click();
   await pagina.waitForSelector('.vacio', { timeout: 10000 });
@@ -199,6 +206,24 @@ try {
     'Hay botón de compartir en el detalle',
     await pagina.getByRole('button', { name: 'Compartir' }).isVisible(),
   );
+
+  await pagina.getByRole('button', { name: 'Compartir' }).click();
+  await pagina.waitForSelector('.hoja--estrecha', { timeout: 10000 });
+  comprobar(
+    'Compartir pregunta cómo enviar',
+    await pagina.locator('.hoja--estrecha .hoja__titulo').textContent().then((t) => /1 foto/.test(t ?? '')),
+  );
+  comprobar(
+    'Ofrece enviar con ficha',
+    await pagina.getByRole('button', { name: /Foto y ficha/ }).isVisible(),
+  );
+  comprobar(
+    'Ofrece enviar solo la foto',
+    await pagina.getByRole('button', { name: /Solo la foto/ }).isVisible(),
+  );
+
+  await pagina.locator('.hoja--estrecha').getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await pagina.waitForSelector('.hoja--estrecha', { state: 'detached', timeout: 5000 });
 
   await pagina.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await pagina.waitForSelector('.hoja', { state: 'detached', timeout: 5000 });
@@ -236,6 +261,20 @@ try {
   await pagina.getByRole('button', { name: 'Ajustes', exact: true }).first().click();
   await pagina.waitForSelector('.tabla-tokens', { timeout: 10000 });
   comprobar('Los ajustes muestran la plantilla de nombres', await pagina.locator('.tabla-tokens').isVisible());
+
+  // El menú debe caber entero también en las pantallas más estrechas.
+  for (const ancho of [320, 390]) {
+    await pagina.setViewportSize({ width: ancho, height: 780 });
+    await pagina.waitForTimeout(250);
+    const corte = await pagina.evaluate(() => {
+      const limite = document.documentElement.clientWidth + 0.5;
+      return [...document.querySelectorAll('.nav__boton')]
+        .filter((b) => b.getBoundingClientRect().right > limite)
+        .map((b) => b.textContent.trim());
+    });
+    comprobar(`El menú entero cabe a ${ancho} px`, corte.length === 0, `cortados: ${corte.join(', ')}`);
+  }
+  await pagina.setViewportSize({ width: 1180, height: 900 });
 
   comprobar('Sin errores de JavaScript', erroresConsola.length === 0, erroresConsola.join(' | '));
 } finally {

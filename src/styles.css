@@ -87,6 +87,12 @@ a { color: var(--acento); }
   min-height: 100%;
 }
 
+/* Sin esto, un elemento ancho dentro del contenido (una tabla, un código
+   largo) estira la columna del grid y se lleva por delante la barra y el menú:
+   el último botón, Ajustes, acaba fuera de la pantalla. `min-width: 0` corta
+   ese contagio de raíz. */
+.app > * { min-width: 0; }
+
 .contenido {
   grid-row: 2;
   padding: 16px 16px 24px;
@@ -124,9 +130,12 @@ a { color: var(--acento); }
   z-index: 30;
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  /* `minmax(0, 1fr)` en vez de `1fr`: sin el mínimo en 0 los botones no pueden
+     encogerse por debajo de su contenido y, al añadir secciones, el último se
+     sale de la pantalla. Así el menú reparte el ancho pase lo que pase. */
+  grid-auto-columns: minmax(0, 1fr);
   gap: 2px;
-  padding: 6px 8px;
+  padding: 6px 4px;
   padding-bottom: max(6px, env(safe-area-inset-bottom));
   background: color-mix(in srgb, var(--fondo) 92%, transparent);
   backdrop-filter: blur(12px);
@@ -134,34 +143,47 @@ a { color: var(--acento); }
 }
 
 .nav__boton {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 7px 4px;
+  min-width: 0;
+  padding: 7px 2px;
   border: 0;
   border-radius: var(--radio-s);
   background: transparent;
   color: var(--texto-2);
   font: inherit;
-  font-size: 0.7rem;
+  /* Se encoge sola cuando hay muchas secciones, sin bajar de un tamaño legible. */
+  font-size: clamp(0.6rem, 2.4vw, 0.7rem);
   font-weight: 600;
   cursor: pointer;
   transition: background var(--transicion), color var(--transicion);
 }
+
+.nav__texto {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .nav__boton:hover { background: var(--superficie-2); }
 .nav__boton[aria-current='page'] { color: var(--acento); background: var(--acento-suave); }
-.nav__icono { width: 21px; height: 21px; }
+.nav__icono { width: 21px; height: 21px; flex: none; }
 .nav__pastilla {
   position: absolute;
-  transform: translate(14px, -8px);
-  min-width: 17px;
-  padding: 1px 4px;
+  top: 3px;
+  left: 50%;
+  margin-left: 4px;
+  min-width: 16px;
+  padding: 0 4px;
   border-radius: 9px;
   background: var(--acento);
   color: #fff;
   font-size: 0.62rem;
   font-weight: 700;
+  line-height: 16px;
   text-align: center;
 }
 
@@ -189,7 +211,7 @@ a { color: var(--acento); }
     max-height: calc(100vh - var(--alto-barra));
   }
   .nav__boton { flex-direction: row; justify-content: flex-start; gap: 10px; padding: 9px 12px; font-size: 0.86rem; }
-  .nav__pastilla { position: static; transform: none; margin-left: auto; }
+  .nav__pastilla { position: static; margin-left: auto; }
   .contenido { grid-area: contenido; grid-row: auto; padding: 22px 26px 40px; }
 }
 
@@ -227,6 +249,9 @@ a { color: var(--acento); }
 .boton__icono { width: 17px; height: 17px; flex: none; }
 
 .grupo-botones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* En pantallas estrechas un rótulo largo parte en dos líneas antes que
+   desbordar la tarjeta. */
+.grupo-botones .boton { white-space: normal; max-width: 100%; }
 
 /* --------------------------------------------------------------- tarjetas */
 
@@ -246,9 +271,12 @@ a { color: var(--acento); }
 .campo { display: block; margin-bottom: 14px; }
 .campo__etiqueta { display: block; font-size: 0.82rem; font-weight: 640; margin-bottom: 5px; }
 .campo__ayuda { display: block; font-size: 0.78rem; color: var(--texto-2); margin-top: 5px; line-height: 1.45; }
+/* Direcciones y claves largas parten antes que empujar el ancho de la página. */
+.campo__ayuda code, .tarjeta__ayuda code, .dato__valor code { overflow-wrap: anywhere; }
 
 .entrada, .seleccion, .area {
   width: 100%;
+  min-width: 0;
   padding: 9px 11px;
   border: 1px solid var(--borde-fuerte);
   border-radius: var(--radio-s);
@@ -595,13 +623,15 @@ a { color: var(--acento); }
 .paso__cuerpo { flex: 1; min-width: 0; font-size: 0.87rem; }
 .paso__cuerpo strong { display: block; margin-bottom: 2px; }
 
-.tabla-tokens { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.tabla-tokens td { padding: 4px 8px 4px 0; vertical-align: top; }
+.tabla-tokens { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.8rem; }
+.tabla-tokens td { padding: 4px 8px 4px 0; vertical-align: top; overflow-wrap: anywhere; }
+.tabla-tokens td:first-child { width: 42%; }
 .tabla-tokens code {
+  display: inline-block; max-width: 100%;
   background: var(--superficie-2); border: 1px solid var(--borde);
   padding: 1px 5px; border-radius: 4px;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.78rem;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .estadisticas { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
@@ -620,4 +650,57 @@ a { color: var(--acento); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ------------------------------------------------- compartir y selección */
+
+.hoja--estrecha { max-width: 520px; }
+.hoja__cuerpo--simple { display: block; }
+
+.acciones-lista {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.acciones-lista__ayuda { font-size: 0.78rem; color: var(--texto-3); }
+
+.opciones-envio { display: grid; gap: 10px; }
+
+.opcion-envio {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transicion), background var(--transicion);
+}
+.opcion-envio:hover:not(:disabled) { border-color: var(--acento); background: var(--acento-suave); }
+.opcion-envio:disabled { opacity: 0.55; cursor: progress; }
+/* La última elección queda marcada para que repetirla sea un solo toque. */
+.opcion-envio--preferida { border-color: var(--acento); box-shadow: 0 0 0 2px var(--acento-suave); }
+.opcion-envio__icono { width: 21px; height: 21px; flex: none; margin-top: 2px; color: var(--acento); }
+.opcion-envio strong { display: block; font-size: 0.93rem; margin-bottom: 2px; }
+.opcion-envio__ayuda { display: block; font-size: 0.8rem; color: var(--texto-2); line-height: 1.45; }
+
+.vista-previa { margin-top: 14px; font-size: 0.82rem; color: var(--texto-2); }
+.vista-previa summary { cursor: pointer; }
+.vista-previa pre {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-s);
+  background: var(--superficie-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  font-size: 0.8rem;
 }

@@ -19,14 +19,14 @@ interface EsquemaArima extends DBSchema {
 }
 
 const NOMBRE_BD = 'fotos-arima';
-const VERSION = 1;
+const VERSION = 2;
 
 let promesaBD: Promise<IDBPDatabase<EsquemaArima>> | null = null;
 
 export function bd(): Promise<IDBPDatabase<EsquemaArima>> {
   if (!promesaBD) {
     promesaBD = openDB<EsquemaArima>(NOMBRE_BD, VERSION, {
-      upgrade(db) {
+      async upgrade(db, versionPrevia, _nueva, tx) {
         if (!db.objectStoreNames.contains('fotos')) {
           const fotos = db.createObjectStore('fotos', { keyPath: 'id' });
           fotos.createIndex('categoria', 'categoria');
@@ -39,6 +39,21 @@ export function bd(): Promise<IDBPDatabase<EsquemaArima>> {
         }
         if (!db.objectStoreNames.contains('ajustes')) {
           db.createObjectStore('ajustes');
+        }
+
+        // v2: el catálogo dejó de ser solo de manualidades (llegaron Diskofesta
+        // e Ihes Gela), así que `esManualidad` pasó a llamarse
+        // `entraEnCatalogo`. Sin esto, las fotos ya guardadas se quedarían con
+        // el campo a `undefined` y desaparecerían del catálogo.
+        if (versionPrevia >= 1 && versionPrevia < 2) {
+          const fotos = tx.objectStore('fotos');
+          for await (const cursor of fotos) {
+            const foto = cursor.value as Foto & { esManualidad?: boolean | null };
+            if ('esManualidad' in foto) {
+              const { esManualidad, ...resto } = foto;
+              await cursor.update({ ...resto, entraEnCatalogo: esManualidad ?? null });
+            }
+          }
         }
       },
     });

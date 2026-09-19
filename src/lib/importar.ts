@@ -19,12 +19,12 @@ export interface ResultadoImportacion {
 
 const TIPOS_ACEPTADOS = /^image\/(jpeg|png|webp|gif|avif|heic|heif)$/i;
 
-function fichaVacia(base: Omit<Foto, 'estado' | 'esManualidad' | 'confianza' | 'categoria' | 'materiales' | 'colores' | 'etiquetas' | 'motor' | 'revision' | 'favorita' | 'nombreEditado'>): Foto {
+function fichaVacia(base: Omit<Foto, 'estado' | 'entraEnCatalogo' | 'confianza' | 'categoria' | 'materiales' | 'colores' | 'etiquetas' | 'motor' | 'revision' | 'favorita' | 'nombreEditado'>): Foto {
   return {
     ...base,
     nombreEditado: false,
     estado: 'pendiente',
-    esManualidad: null,
+    entraEnCatalogo: null,
     confianza: 0,
     categoria: SIN_CLASIFICAR,
     materiales: [],

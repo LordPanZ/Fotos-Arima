@@ -308,8 +308,8 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar'): vo
 
       {!resumen && !ocupado && tienda.fotos.length === 0 && (
         <Vacio emoji="📥" titulo="Empieza por aquí">
-          Importa unas cuantas fotos y la app las clasificará por tipo de manualidad: ganchillo,
-          cerámica, macramé, papel… Después podrás renombrarlas y compartirlas.
+          Importa unas cuantas fotos y la app las clasificará por categoría: ganchillo, cerámica,
+          macramé, papel, Diskofesta, Ihes Gela… Después podrás renombrarlas y compartirlas.
         </Vacio>
       )}
     </>

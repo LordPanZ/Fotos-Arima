@@ -27,7 +27,8 @@ export interface Foto {
   importadaEl: string;
 
   estado: EstadoAnalisis;
-  esManualidad: boolean | null;
+  /** `true` si es una manualidad o una actividad de Arima; `false` si no. */
+  entraEnCatalogo: boolean | null;
   confianza: number;
   categoria: string;
   /** Segunda opción del clasificador, útil al revisar. */
@@ -56,6 +57,8 @@ export interface Ajustes {
   /** Por debajo de este valor la foto va a la cola de revisión. */
   umbralConfianza: number;
   plantillaNombre: string;
+  /** Opción preseleccionada al compartir: con ficha o solo la imagen. */
+  compartirConFicha: boolean;
   /** Cuántas fotos se analizan a la vez. */
   concurrencia: number;
   /** Ocultar en la galería lo que el clasificador ha descartado. */
@@ -72,13 +75,14 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   precision: 'equilibrada',
   umbralConfianza: 0.6,
   plantillaNombre: '{categoria} - {descripcion} - {fecha}',
+  compartirConFicha: true,
   concurrencia: 3,
   ocultarDescartadas: true,
   tamanoMaximo: 2048,
 };
 
 export interface ResultadoClasificacion {
-  esManualidad: boolean;
+  entraEnCatalogo: boolean;
   confianza: number;
   categoria: string;
   categoriaAlternativa?: string;

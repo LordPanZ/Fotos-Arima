@@ -21,20 +21,23 @@ comida, capturas de pantalla, documentos y productos comprados. Lo que no tiene
 claro no entra al catálogo: va a una cola de revisión donde lo confirmas o lo
 descartas de un toque.
 
-**Agrupar por tipo de manualidad.** 18 categorías —ganchillo y punto, costura y
-textil, macramé y fibras, cerámica y arcilla, pintura y dibujo, papel y cartón,
-madera y carpintería, joyería y abalorios, velas y jabones, resina epoxi,
-mosaico y vidrio, reciclaje, decoración del hogar, fiestas, Navidad, infantil,
-flores y naturaleza, y otras— con la técnica, los materiales y los colores de
-cada pieza.
+**Agrupar por categoría.** 20 categorías. Dieciocho de manualidad —ganchillo y
+punto, costura y textil, macramé y fibras, cerámica y arcilla, pintura y dibujo,
+papel y cartón, madera y carpintería, joyería y abalorios, velas y jabones,
+resina epoxi, mosaico y vidrio, reciclaje, decoración del hogar, fiestas,
+Navidad, infantil, flores y naturaleza, y otras— más las dos actividades de
+Arima: **Diskofesta** e **Ihes Gela**. Cada foto guarda además su técnica o
+escena, sus materiales y sus colores.
 
 **Nombrar y renombrar.** Nombres automáticos con plantilla configurable
 (`Macramé y fibras - colgante de pared beige - 2024-05-12`), editables uno a uno
 o en lote. Lo que escribes a mano no se sobrescribe.
 
 **Compartir.** Menú nativo del sistema con las fotos adjuntas, una o varias a la
-vez. También descarga directa y exportación a ZIP con carpetas por tipo y un
-`catalogo.csv`.
+vez. Al compartir eliges si va **la foto con su ficha** (nombre, categoría y
+materiales como texto) o **solo la imagen**, sin nada escrito; la app recuerda
+tu última elección. También descarga directa y exportación a ZIP con carpetas
+por categoría y un `catalogo.csv`.
 
 ---
 

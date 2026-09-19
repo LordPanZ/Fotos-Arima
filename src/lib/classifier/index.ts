@@ -17,7 +17,7 @@ export function aplicarResultado(
   const actualizada: Foto = {
     ...foto,
     estado: 'listo',
-    esManualidad: resultado.esManualidad,
+    entraEnCatalogo: resultado.entraEnCatalogo,
     confianza: resultado.confianza,
     categoria: resultado.categoria,
     categoriaAlternativa: resultado.categoriaAlternativa,
@@ -55,7 +55,7 @@ export function estaEnCatalogo(foto: Foto, umbral: number): boolean {
   if (foto.revision === 'descartada') return false;
   return (
     foto.estado === 'listo' &&
-    foto.esManualidad === true &&
+    foto.entraEnCatalogo === true &&
     foto.categoria !== SIN_CLASIFICAR &&
     foto.categoria !== NO_MANUALIDAD &&
     foto.confianza >= umbral
