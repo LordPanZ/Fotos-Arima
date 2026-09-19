@@ -3,6 +3,7 @@ name: Publicar en GitHub Pages
 on:
   push:
     branches: [main]
+  # Permite publicar a mano desde cualquier rama (Actions › Ejecutar workflow).
   workflow_dispatch:
 
 permissions:
@@ -28,13 +29,22 @@ jobs:
       - run: npm ci
 
       - name: Compilar para Pages
-        run: npm run build
+        # La app vive en https://usuario.github.io/<repo>/, así que la base
+        # tiene que llevar el nombre del repositorio con sus mayúsculas: las
+        # rutas de GitHub Pages distinguen mayúsculas de minúsculas.
+        run: |
+          export VITE_BASE="/${GITHUB_REPOSITORY#*/}/"
+          echo "Compilando con VITE_BASE=$VITE_BASE"
+          npm run build
         env:
-          # La app vive en https://usuario.github.io/<repo>/
-          VITE_BASE: /${{ github.event.repository.name }}/
           VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
 
       - uses: actions/configure-pages@v5
+        with:
+          # Activa Pages en el repositorio la primera vez, sin tener que
+          # tocarlo a mano en Settings.
+          enablement: true
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
