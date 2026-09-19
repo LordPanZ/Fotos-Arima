@@ -13,7 +13,8 @@
     "desktop:install": "npm --prefix desktop install",
     "desktop:dev": "npm run build && npm --prefix desktop run start",
     "desktop:build": "npm run build && npm --prefix desktop run dist",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "verificar-pwa": "node scripts/verificar-pwa.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",

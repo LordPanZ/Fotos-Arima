@@ -34,3 +34,8 @@ jobs:
 
       - name: Prueba de humo
         run: npm run smoke
+
+      - name: Comprobar que sigue siendo instalable como PWA
+        run: |
+          VITE_BASE="/${GITHUB_REPOSITORY#*/}/" npm run build
+          BASE_PUBLICA="/${GITHUB_REPOSITORY#*/}/" npm run verificar-pwa
