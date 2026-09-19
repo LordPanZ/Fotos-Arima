@@ -1,8 +1,9 @@
-import type { Ajustes, Foto } from '../types';
+import type { Ajustes, Evento, Foto } from '../types';
 import { SIN_CLASIFICAR } from '../taxonomy';
 import { guardarFoto, guardarImagenes, idsGoogleExistentes, obtenerFoto } from './db';
 import { crearMiniatura, dimensiones, fechaExif, huella, reescalar } from './image';
 import { descargarFoto as descargarDeGoogle, listarSeleccion, type ElementoSeleccionado } from './googlePicker';
+import { leerEnvio, type EnvioLeido } from './envio';
 
 export interface ProgresoImportacion {
   fase: 'preparando' | 'descargando' | 'guardando' | 'hecho';
@@ -182,4 +183,86 @@ async function importarElemento(
 
   await guardarFoto(foto);
   return foto;
+}
+
+/* ----------------------------------------- envíos de monitores (formulario) */
+
+/**
+ * Importa un paquete del formulario «Tailerren Argazkiak Arima».
+ *
+ * Las fotos entran con `origen: 'envio'`, que es lo que hace que pasen
+ * siempre por la pantalla de Revisar antes de llegar al catálogo.
+ */
+export async function importarEnvio(
+  paquete: Blob | EnvioLeido,
+  ajustes: Ajustes,
+  alProgresar?: (p: ProgresoImportacion) => void,
+): Promise<ResultadoImportacion & { evento: Evento }> {
+  alProgresar?.({ fase: 'preparando', hechas: 0, total: 0 });
+
+  const { manifiesto, fotos } =
+    paquete instanceof Blob ? await leerEnvio(paquete) : paquete;
+
+  const evento: Evento = {
+    titulo: manifiesto.titulo,
+    lugar: manifiesto.lugar,
+    monitor: manifiesto.monitor,
+    notas: manifiesto.notas,
+    idEnvio: manifiesto.id,
+  };
+
+  const resultado: ResultadoImportacion & { evento: Evento } = {
+    nuevas: [],
+    duplicadas: 0,
+    fallidas: [],
+    evento,
+  };
+
+  // La fecha del formulario manda sobre la del archivo: el monitor sabe qué
+  // día fue el taller, y las copias reenviadas por mensajería pierden el EXIF.
+  const fechaEvento = new Date(`${manifiesto.fecha}T12:00:00`);
+  const fecha = Number.isNaN(fechaEvento.getTime())
+    ? new Date().toISOString()
+    : fechaEvento.toISOString();
+
+  let hechas = 0;
+  for (const foto of fotos) {
+    alProgresar?.({ fase: 'guardando', hechas, total: fotos.length, actual: foto.nombre });
+    try {
+      const id = `envio-${manifiesto.id}-${await huella(foto.blob)}`;
+      if (await obtenerFoto(id)) {
+        resultado.duplicadas += 1;
+        continue;
+      }
+
+      const { completa, ancho, alto } = await guardarImagen(id, foto.blob, ajustes.tamanoMaximo);
+      const ficha = fichaVacia({
+        id,
+        origen: 'envio',
+        evento,
+        archivoOriginal: foto.nombre.replace(/^fotos\//, ''),
+        nombre: manifiesto.titulo,
+        tipoMime: completa.type || 'image/jpeg',
+        ancho,
+        alto,
+        bytes: completa.size,
+        fecha,
+        importadaEl: new Date().toISOString(),
+      });
+
+      await guardarFoto(ficha);
+      resultado.nuevas.push(ficha);
+    } catch (error) {
+      resultado.fallidas.push({
+        archivo: foto.nombre,
+        motivo: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      hechas += 1;
+      alProgresar?.({ fase: 'guardando', hechas, total: fotos.length });
+    }
+  }
+
+  alProgresar?.({ fase: 'hecho', hechas, total: fotos.length });
+  return resultado;
 }

@@ -45,6 +45,10 @@ export function aplicarResultado(
 export function necesitaRevision(foto: Foto, umbral: number): boolean {
   if (foto.revision !== 'auto') return false;
   if (foto.estado !== 'listo') return false;
+  // Lo que mandan los monitores pasa siempre por revisión, por seguro que
+  // esté el clasificador: es material de otra persona y alguien lo mira antes
+  // de que entre al catálogo.
+  if (foto.origen === 'envio') return true;
   if (foto.categoria === SIN_CLASIFICAR) return true;
   return foto.confianza < umbral;
 }

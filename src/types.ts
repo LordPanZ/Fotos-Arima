@@ -1,4 +1,15 @@
-export type Origen = 'google' | 'local';
+export type Origen = 'google' | 'local' | 'envio';
+
+/** Datos del taller o evento, tal y como los rellenó quien envió las fotos. */
+export interface Evento {
+  titulo: string;
+  lugar: string;
+  /** Quién envía. Sirve para saber a quién preguntar si algo no cuadra. */
+  monitor?: string;
+  notas?: string;
+  /** Identificador del envío al que pertenece la foto. */
+  idEnvio: string;
+}
 
 export type EstadoAnalisis = 'pendiente' | 'analizando' | 'listo' | 'error';
 
@@ -12,6 +23,8 @@ export interface Foto {
   origen: Origen;
   /** Identificador del elemento en Google Fotos, cuando viene de allí. */
   idGoogle?: string;
+  /** Presente cuando la foto llega desde el formulario de monitores. */
+  evento?: Evento;
   /** Nombre del archivo original, tal y como llegó. */
   archivoOriginal: string;
   /** Nombre editable: es el que se usa al compartir y exportar. */
