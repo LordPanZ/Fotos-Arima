@@ -66,6 +66,12 @@ const contexto = await navegador.newContext({
 /** Estado compartido del catálogo de mentira. */
 const catalogo = { fichas: [], porEntregar: [] };
 
+// WhatsApp no es alcanzable desde aquí: se responde con una página vacía para
+// poder leer la dirección exacta que se le pide abrir.
+await contexto.route('https://wa.me/**', (ruta) =>
+  ruta.fulfill({ status: 200, contentType: 'text/html', body: '<p>wa.me</p>' }),
+);
+
 async function montarServidorFalso(pagina) {
   await pagina.route('**/functions/v1/catalogo*', async (ruta) => {
     const peticion = ruta.request();
@@ -176,6 +182,33 @@ try {
     await pagina.getByRole('button', { name: /Arimara bidali/ }).isDisabled(),
   );
 
+  // Instalación: el aviso sale también donde no hay prompt automático (iPhone).
+  comprobar(
+    'Invita a instalar la app',
+    (await pagina.locator('.panel-instalar').textContent())?.includes('Instalatu aplikazioa'),
+  );
+  await pagina.getByRole('button', { name: 'Nola?' }).click();
+  const instrucciones = (await pagina.locator('.instrucciones').textContent()) ?? '';
+  comprobar(
+    'Explica cómo instalarla a mano',
+    /hasierako pantailara|Instalatu aplikazioa/.test(instrucciones),
+    instrucciones.slice(0, 90),
+  );
+
+  // Reparto del enlace entre monitores.
+  const [emergente] = await Promise.all([
+    pagina.context().waitForEvent('page', { timeout: 10000 }),
+    pagina.getByRole('button', { name: 'WhatsApp' }).click(),
+  ]);
+  const urlWhatsApp = emergente.url();
+  await emergente.close();
+  comprobar(
+    'El formulario se reparte por WhatsApp',
+    urlWhatsApp.startsWith('https://wa.me/?text=')
+      && decodeURIComponent(urlWhatsApp).includes('/formulario/'),
+    urlWhatsApp.slice(0, 90),
+  );
+
   await rellenar(pagina, rutas);
   comprobar('Muestra las fotos elegidas', (await pagina.locator('.formulario__tira').count()) === 3);
 
@@ -215,6 +248,24 @@ try {
     ),
     JSON.stringify(catalogo.fichas[0]?.evento),
   );
+
+  /* ------------------------- la app reparte el enlace a los monitores */
+  const appEnlace = await contexto.newPage();
+  await montarServidorFalso(appEnlace);
+  await appEnlace.goto(`${base}#/importar`, { waitUntil: 'networkidle' });
+  await appEnlace.waitForTimeout(1200);
+  const [emergenteApp] = await Promise.all([
+    contexto.waitForEvent('page', { timeout: 10000 }),
+    appEnlace.getByRole('button', { name: 'Enviar por WhatsApp' }).click(),
+  ]);
+  const urlApp = decodeURIComponent(emergenteApp.url());
+  await emergenteApp.close();
+  comprobar(
+    'Desde la app se manda el formulario por WhatsApp',
+    urlApp.startsWith('https://wa.me/?text=') && urlApp.includes('/formulario/'),
+    urlApp.slice(0, 100),
+  );
+  await appEnlace.close();
 
   /* --------------------------------------- el formulario es instalable */
   const form3 = await contexto.newPage();

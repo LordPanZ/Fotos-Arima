@@ -121,3 +121,22 @@
   border-color: var(--acento);
   color: var(--acento-fuerte);
 }
+
+/* --------------------------------------- instalación y reparto del enlace */
+
+.instrucciones h3 { font-size: 0.95rem; margin-bottom: 8px; }
+.instrucciones ol { margin: 0; padding-left: 20px; font-size: 0.87rem; line-height: 1.7; }
+.instrucciones strong { font-weight: 660; }
+
+.formulario__repartir {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--borde);
+  font-size: 0.82rem;
+  color: var(--texto-2);
+}
+.formulario__repartir span { flex: 1; min-width: 150px; }

@@ -6,7 +6,11 @@ import { importarArchivos, importarDesdeGoogle, importarEnvio, type ProgresoImpo
 import { EXTENSION_ENVIO } from '../lib/envio';
 import { necesitaRevision } from '../lib/classifier';
 import { AvisoLinea, BarraProgreso, Vacio } from '../components/comunes';
-import { IconoCarpeta, IconoGoogle, IconoRefrescar, IconoSobre } from '../components/Icons';
+import { IconoCarpeta, IconoCompartir, IconoGoogle, IconoRefrescar, IconoSobre } from '../components/Icons';
+import { abrirWhatsApp, compartirEnlace, copiarEnlace, urlDelFormulario } from '../lib/compartirEnlace';
+
+const TEXTO_INVITACION =
+  'Aquí puedes mandar las fotos de los talleres de Arima. Ábrelo e instálalo en el móvil:';
 
 type Fase = 'listo' | 'conectando' | 'esperando' | 'importando';
 
@@ -301,8 +305,65 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar'): vo
           }}
         />
         <p className="campo__ayuda" style={{ marginTop: 10 }}>
-          Los envíos terminan en <code>{EXTENSION_ENVIO}</code>. El enlace del formulario para tus
-          monitores es <code>{`${window.location.origin}${import.meta.env.BASE_URL}formulario/`}</code>
+          Los envíos terminan en <code>{EXTENSION_ENVIO}</code>.
+        </p>
+      </div>
+
+      <div className="tarjeta">
+        <div className="tarjeta__titulo">
+          <IconoCompartir style={{ width: 19, height: 19 }} />
+          <h2>Pasar el formulario a los monitores</h2>
+        </div>
+        <p className="tarjeta__ayuda">
+          <strong>Tailerren Argazkiak</strong> es una app aparte, en euskera, que se instala en el
+          móvil. Mándales el enlace y que la instalen: desde ahí suben las fotos de sus talleres.
+        </p>
+
+        <div className="grupo-botones">
+          <button
+            type="button"
+            className="boton boton--primario"
+            onClick={() => abrirWhatsApp(`${TEXTO_INVITACION} ${urlDelFormulario()}`)}
+          >
+            Enviar por WhatsApp
+          </button>
+
+          <button
+            type="button"
+            className="boton"
+            onClick={async () => {
+              const resultado = await compartirEnlace({
+                titulo: 'Tailerren Argazkiak Arima',
+                texto: TEXTO_INVITACION,
+                url: urlDelFormulario(),
+              });
+              if (resultado === 'copiado') tienda.avisar('Enlace copiado al portapapeles.', 'exito');
+              if (resultado === 'sin-portapapeles') {
+                tienda.avisar('Este navegador no deja copiar solo. Copia el enlace de abajo.', 'error');
+              }
+            }}
+          >
+            <IconoCompartir className="boton__icono" />
+            Compartir de otra forma
+          </button>
+
+          <button
+            type="button"
+            className="boton boton--fantasma"
+            onClick={async () => {
+              const resultado = await copiarEnlace(urlDelFormulario());
+              tienda.avisar(
+                resultado === 'copiado' ? 'Enlace copiado.' : 'No se ha podido copiar.',
+                resultado === 'copiado' ? 'exito' : 'error',
+              );
+            }}
+          >
+            Copiar enlace
+          </button>
+        </div>
+
+        <p className="campo__ayuda" style={{ marginTop: 12 }}>
+          <code>{urlDelFormulario()}</code>
         </p>
       </div>
 

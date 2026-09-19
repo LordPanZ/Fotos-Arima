@@ -8,6 +8,9 @@ import {
   IconoDescargar, IconoInstalar, IconoLogo, IconoRefrescar,
 } from '../components/Icons';
 import { MATERIALES, nombresEnCastellano } from '../materiales';
+import {
+  abrirWhatsApp, compartirEnlace, esIOS, estaInstalada, urlDelFormulario,
+} from '../lib/compartirEnlace';
 
 const RECUERDA = 'arima.formulario.monitor';
 const LIMITE_FOTOS = 60;
@@ -55,6 +58,9 @@ export function Formulario() {
   const [materiales, setMateriales] = useState<string[]>([]);
   const [otrosMateriales, setOtrosMateriales] = useState('');
   const [instalador, setInstalador] = useState<EventoInstalacion | null>(null);
+  const [instalada] = useState(estaInstalada);
+  const [comoInstalar, setComoInstalar] = useState(false);
+  const [copiado, setCopiado] = useState(false);
   const [fotos, setFotos] = useState<Elegida[]>([]);
 
   const [progreso, setProgreso] = useState<ProgresoEnvio | null>(null);
@@ -249,24 +255,59 @@ export function Formulario() {
         </div>
       </header>
 
-      {instalador && (
+      {!instalada && (
         <div className="panel-instalar">
           <IconoInstalar style={{ width: 22, height: 22, flex: 'none' }} />
           <div className="panel-instalar__texto">
-            <strong>Instalatu formularioa</strong> zure mugikorrean, hurrengoan azkarrago
-            irekitzeko.
+            <strong>Instalatu aplikazioa</strong> zure mugikorrean: hurrengoan ikono batetik
+            irekiko duzu, nabigatzailera joan gabe.
           </div>
-          <button
-            type="button"
-            className="boton boton--primario boton--pequeno"
-            onClick={async () => {
-              await instalador.prompt();
-              await instalador.userChoice;
-              setInstalador(null);
-            }}
-          >
-            Instalatu
-          </button>
+          {instalador ? (
+            <button
+              type="button"
+              className="boton boton--primario boton--pequeno"
+              onClick={async () => {
+                await instalador.prompt();
+                await instalador.userChoice;
+                setInstalador(null);
+              }}
+            >
+              Instalatu
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="boton boton--primario boton--pequeno"
+              onClick={() => setComoInstalar((v) => !v)}
+              aria-expanded={comoInstalar}
+            >
+              Nola?
+            </button>
+          )}
+        </div>
+      )}
+
+      {comoInstalar && !instalada && (
+        <div className="tarjeta instrucciones">
+          {esIOS() ? (
+            <>
+              <h3>iPhone edo iPad</h3>
+              <ol>
+                <li>Ireki orri hau <strong>Safari</strong> nabigatzailean.</li>
+                <li>Ukitu <strong>Partekatu</strong> botoia (gezia duen laukia).</li>
+                <li>Aukeratu <strong>«Gehitu hasierako pantailara»</strong>.</li>
+              </ol>
+            </>
+          ) : (
+            <>
+              <h3>Android</h3>
+              <ol>
+                <li>Ukitu nabigatzailearen menua (<strong>⋮</strong>).</li>
+                <li>Aukeratu <strong>«Instalatu aplikazioa»</strong> edo
+                  <strong> «Gehitu hasierako pantailara»</strong>.</li>
+              </ol>
+            </>
+          )}
         </div>
       )}
 
@@ -488,6 +529,36 @@ export function Formulario() {
           aukerak fitxategi bakar bat prestatzen du WhatsApp bidez bidaltzeko: erabili
           estaldurarik ez baduzu edo bidalketak huts egiten badu.
         </p>
+      </div>
+
+      <div className="formulario__repartir">
+        <span>Beste monitore batek behar du?</span>
+        <button
+          type="button"
+          className="boton boton--pequeno"
+          onClick={() =>
+            abrirWhatsApp(`Arimako tailerretako argazkiak bidaltzeko: ${urlDelFormulario()}`)
+          }
+        >
+          WhatsApp
+        </button>
+        <button
+          type="button"
+          className="boton boton--pequeno boton--fantasma"
+          onClick={async () => {
+            const resultado = await compartirEnlace({
+              titulo: 'Tailerren Argazkiak Arima',
+              texto: 'Arimako tailerretako argazkiak bidaltzeko',
+              url: urlDelFormulario(),
+            });
+            if (resultado === 'copiado') {
+              setCopiado(true);
+              setTimeout(() => setCopiado(false), 2500);
+            }
+          }}
+        >
+          {copiado ? 'Kopiatuta!' : 'Partekatu'}
+        </button>
       </div>
     </div>
   );
