@@ -2,7 +2,7 @@ import type { Evento, Foto } from '../types';
 import { SIN_CLASIFICAR } from '../taxonomy';
 import { crearMiniatura, huella, reescalar } from './image';
 import { enlacesSubida, guardarFichas, subirImagen } from './nube';
-import { nuevoIdEnvio, type DatosFormulario } from './envio';
+import { nombreDeFoto, nuevoIdEnvio, type DatosFormulario } from './envio';
 
 /**
  * Envío directo al catálogo compartido desde el formulario de monitores.
@@ -62,7 +62,7 @@ export async function enviarAlBuzon(
     const tanda = archivos.slice(inicio, inicio + TANDA);
     const preparadas: Array<{ foto: Foto; completa: Blob; miniatura: Blob }> = [];
 
-    for (const archivo of tanda) {
+    for (const [posicion, archivo] of tanda.entries()) {
       try {
         const { blob: completa, ancho, alto } = await reescalar(archivo, LADO_MAXIMO);
         const miniatura = await crearMiniatura(completa);
@@ -76,7 +76,7 @@ export async function enviarAlBuzon(
             origen: 'envio',
             evento,
             archivoOriginal: archivo.name,
-            nombre: evento.titulo,
+            nombre: nombreDeFoto(evento.titulo, inicio + posicion, archivos.length),
             // El título lo escribió el monitor: cuenta como nombre puesto a
             // mano y la plantilla no lo sobrescribe al analizar la foto.
             nombreEditado: true,

@@ -13,6 +13,21 @@ Pásaselo a los monitores. No hace falta instalar nada ni registrarse: se abre e
 el navegador del móvil y ya está. Conviene que lo guarden en marcadores o en la
 pantalla de inicio, porque lo usarán a menudo.
 
+## Varios talleres de una vez
+
+Arriba se pregunta **cuántos talleres** va a mandar (hasta 8). Si dice 3, salen
+3 bloques numerados, cada uno con su título, fecha, lugar, materiales, notas y
+**sus propias fotos**.
+
+Al enviar, **cada taller viaja por separado** y llega a Fotos Arima como un
+envío independiente: sus fotos no se mezclan con las de los otros y cada uno
+conserva su ficha. Por el camino del archivo se genera un paquete por taller.
+
+El número del bloque se pone en ámbar mientras falte algo, y el botón de enviar
+no se activa hasta que todos los talleres estén completos.
+
+*Tu nombre* se pregunta una sola vez, arriba: es de la persona, no del taller.
+
 ## Qué rellenan
 
 | Campo | En el formulario | Obligatorio | Para qué |
@@ -50,7 +65,7 @@ Cada foto guarda la ficha del taller entera, y se ve al abrirla en la app:
 
 | En la foto | De dónde sale |
 |---|---|
-| **Nombre** | El título del taller, tal cual |
+| **Nombre** | El título del taller. Si el envío trae varias fotos, se numeran: «Taller de macramé en Getxo 01, 02, 03…» |
 | **Etiquetas** | Los materiales marcados, más las que añada el clasificador |
 | **Taller** | Título y lugar del formulario |
 | **Enviada por** | Nombre del monitor |

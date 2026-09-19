@@ -1,24 +1,38 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { empaquetarEnvio, type DatosFormulario } from '../lib/envio';
-import { enviarAlBuzon, type ProgresoEnvio, type ResultadoEnvio } from '../lib/envioNube';
+import { enviarAlBuzon, type ProgresoEnvio } from '../lib/envioNube';
 import { descargarBlob } from '../lib/share';
 import { ErrorNube } from '../lib/nube';
 import {
-  IconoCarpeta, IconoCerrar, IconoCompartir, IconoComprobado,
+  IconoCompartir, IconoComprobado,
   IconoDescargar, IconoInstalar, IconoLogo, IconoRefrescar,
 } from '../components/Icons';
-import { MATERIALES, nombresEnCastellano } from '../materiales';
+import { nombresEnCastellano } from '../materiales';
 import {
   abrirWhatsApp, compartirEnlace, esIOS, estaInstalada, urlDelFormulario,
 } from '../lib/compartirEnlace';
+import { BloqueTaller, tallerCompleto, type Elegida, type Taller } from './BloqueTaller';
 
 const RECUERDA = 'arima.formulario.monitor';
-const LIMITE_FOTOS = 60;
+const MAXIMO_TALLERES = 8;
 
 function hoy(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function tallerNuevo(lugar = ''): Taller {
+  return {
+    clave: `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    titulo: '',
+    fecha: hoy(),
+    lugar,
+    notas: '',
+    materiales: [],
+    otros: '',
+    fotos: [],
+  };
 }
 
 /**
@@ -34,41 +48,31 @@ function mensajeDeFallo(e: unknown): string {
   return `Zerbaitek huts egin du: ${e instanceof Error ? e.message : String(e)}`;
 }
 
-function formatearBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} kB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-interface Elegida {
-  archivo: File;
-  url: string;
-}
-
 interface EventoInstalacion extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+interface Resumen {
+  talleres: number;
+  argazkiak: number;
+  fallidas: number;
+}
+
 export function Formulario() {
-  const [titulo, setTitulo] = useState('');
-  const [fecha, setFecha] = useState(hoy);
-  const [lugar, setLugar] = useState('');
   const [monitor, setMonitor] = useState('');
-  const [notas, setNotas] = useState('');
-  const [materiales, setMateriales] = useState<string[]>([]);
-  const [otrosMateriales, setOtrosMateriales] = useState('');
+  const [talleres, setTalleres] = useState<Taller[]>(() => [tallerNuevo()]);
+
+  const [progreso, setProgreso] = useState<ProgresoEnvio | null>(null);
+  const [cual, setCual] = useState<{ indice: number; total: number } | null>(null);
+  const [enviando, setEnviando] = useState<'buzon' | 'archivo' | null>(null);
+  const [hecho, setHecho] = useState<Resumen | null>(null);
+  const [fallo, setFallo] = useState<string | null>(null);
+
   const [instalador, setInstalador] = useState<EventoInstalacion | null>(null);
   const [instalada] = useState(estaInstalada);
   const [comoInstalar, setComoInstalar] = useState(false);
   const [copiado, setCopiado] = useState(false);
-  const [fotos, setFotos] = useState<Elegida[]>([]);
-
-  const [progreso, setProgreso] = useState<ProgresoEnvio | null>(null);
-  const [enviando, setEnviando] = useState<'buzon' | 'archivo' | null>(null);
-  const [hecho, setHecho] = useState<ResultadoEnvio | null>(null);
-  const [fallo, setFallo] = useState<string | null>(null);
-
-  const entrada = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const capturar = (e: Event) => {
@@ -85,116 +89,162 @@ export function Formulario() {
     try {
       const guardado = JSON.parse(localStorage.getItem(RECUERDA) ?? '{}');
       if (typeof guardado.monitor === 'string') setMonitor(guardado.monitor);
-      if (typeof guardado.lugar === 'string') setLugar(guardado.lugar);
+      if (typeof guardado.lugar === 'string' && guardado.lugar) {
+        setTalleres((previos) =>
+          previos.map((t, i) => (i === 0 && !t.lugar ? { ...t, lugar: guardado.lugar } : t)),
+        );
+      }
     } catch {
       /* si no se puede leer, se empieza en blanco */
     }
   }, []);
 
-  // Las vistas previas se liberan al salir de la página y, una a una, al
-  // quitar una foto. Hacerlo en cada cambio de `fotos` invalidaría también las
-  // de las que siguen elegidas, y se quedarían en blanco al añadir más.
-  const vivas = useRef<Elegida[]>([]);
-  vivas.current = fotos;
-  useEffect(() => () => vivas.current.forEach((f) => URL.revokeObjectURL(f.url)), []);
-
-  const datos: DatosFormulario = useMemo(
-    () => ({
-      titulo,
-      fecha,
-      lugar,
-      monitor,
-      notas,
-      // Se guardan en castellano, que es el idioma del catálogo, aunque el
-      // monitor los haya elegido con los rótulos en euskera.
-      materiales: [
-        ...nombresEnCastellano(materiales),
-        ...otrosMateriales.split(',').map((m) => m.trim().toLowerCase()).filter(Boolean),
-      ],
-    }),
-    [titulo, fecha, lugar, monitor, notas, materiales, otrosMateriales],
+  // Las vistas previas se liberan al salir de la página y, una a una, al quitar
+  // una foto. Hacerlo en cada cambio invalidaría las que siguen elegidas.
+  const vivos = useRef<Taller[]>([]);
+  vivos.current = talleres;
+  useEffect(
+    () => () => vivos.current.forEach((t) => t.fotos.forEach((f) => URL.revokeObjectURL(f.url))),
+    [],
   );
 
-  const pesoTotal = fotos.reduce((suma, f) => suma + f.archivo.size, 0);
-  const listo = titulo.trim() !== '' && lugar.trim() !== '' && fecha !== '' && fotos.length > 0;
+  const cambiarTaller = useCallback((clave: string, cambios: Partial<Taller>) => {
+    setTalleres((previos) => previos.map((t) => (t.clave === clave ? { ...t, ...cambios } : t)));
+  }, []);
 
-  const anadir = useCallback((lista: FileList | File[]) => {
-    setFallo(null);
-    const imagenes = [...lista].filter(
-      (a) => a.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(a.name),
-    );
-    if (!imagenes.length) return;
-
-    setFotos((previas) => {
-      // Se evita repetir la misma foto si se elige dos veces.
-      const yaEstan = new Set(previas.map((p) => `${p.archivo.name}:${p.archivo.size}`));
-      const nuevas = imagenes
-        .filter((a) => !yaEstan.has(`${a.name}:${a.size}`))
-        .slice(0, Math.max(0, LIMITE_FOTOS - previas.length))
-        .map((archivo) => ({ archivo, url: URL.createObjectURL(archivo) }));
-      return [...previas, ...nuevas];
+  const quitarTaller = useCallback((clave: string) => {
+    setTalleres((previos) => {
+      if (previos.length === 1) return previos;
+      const fuera = previos.find((t) => t.clave === clave);
+      fuera?.fotos.forEach((f) => URL.revokeObjectURL(f.url));
+      return previos.filter((t) => t.clave !== clave);
     });
   }, []);
 
-  const quitar = useCallback((indice: number) => {
-    setFotos((previas) => {
-      URL.revokeObjectURL(previas[indice].url);
-      return previas.filter((_, i) => i !== indice);
+  const cambiarCuantos = useCallback((cuantos: number) => {
+    setTalleres((previos) => {
+      const destino = Math.max(1, Math.min(MAXIMO_TALLERES, cuantos));
+      if (destino === previos.length) return previos;
+
+      if (destino > previos.length) {
+        // El lugar suele repetirse en la misma jornada: se hereda del anterior.
+        const ultimo = previos[previos.length - 1];
+        const nuevos = Array.from({ length: destino - previos.length }, () =>
+          tallerNuevo(ultimo?.lugar ?? ''),
+        );
+        return [...previos, ...nuevos];
+      }
+
+      // Al reducir se quitan los últimos; si llevan datos, se pregunta.
+      const sobrantes = previos.slice(destino);
+      const conDatos = sobrantes.some((t) => t.titulo.trim() || t.fotos.length);
+      if (conDatos && !confirm('Azken tailerrak ezabatuko dira. Ziur zaude?')) return previos;
+      sobrantes.forEach((t) => t.fotos.forEach((f) => URL.revokeObjectURL(f.url)));
+      return previos.slice(0, destino);
     });
   }, []);
 
   const recordar = () => {
     try {
-      localStorage.setItem(RECUERDA, JSON.stringify({ monitor, lugar }));
+      localStorage.setItem(
+        RECUERDA,
+        JSON.stringify({ monitor, lugar: talleres[0]?.lugar ?? '' }),
+      );
     } catch {
       /* sin persistencia no pasa nada grave */
     }
   };
 
+  const datosDe = (taller: Taller): DatosFormulario => ({
+    titulo: taller.titulo,
+    fecha: taller.fecha,
+    lugar: taller.lugar,
+    monitor,
+    notas: taller.notas,
+    // Se guardan en castellano, que es el idioma del catálogo, aunque el
+    // monitor los haya elegido con los rótulos en euskera.
+    materiales: [
+      ...nombresEnCastellano(taller.materiales),
+      ...taller.otros.split(',').map((m) => m.trim().toLowerCase()).filter(Boolean),
+    ],
+  });
+
+  const listos = talleres.every(tallerCompleto);
+  const totalFotos = talleres.reduce((suma, t) => suma + t.fotos.length, 0);
+
+  /* ------------------------------------------------------------- envíos */
+
   const enviarBuzon = async () => {
     setEnviando('buzon');
     setFallo(null);
+    recordar();
+
+    const resumen: Resumen = { talleres: 0, argazkiak: 0, fallidas: 0 };
     try {
-      recordar();
-      const resultado = await enviarAlBuzon(datos, fotos.map((f) => f.archivo), setProgreso);
-      if (!resultado.enviadas) {
-        setFallo(
-          'Ezin izan da argazkirik bidali. Saiatu berriro edo erabili «Fitxategi gisa bidali».',
+      // Cada taller viaja por su cuenta: llegan a Fotos Arima como envíos
+      // independientes, con su propia ficha y sin mezclarse entre ellos.
+      for (const [indice, taller] of talleres.entries()) {
+        setCual({ indice, total: talleres.length });
+        const resultado = await enviarAlBuzon(
+          datosDe(taller),
+          taller.fotos.map((f) => f.archivo),
+          setProgreso,
         );
+        if (resultado.enviadas) resumen.talleres += 1;
+        resumen.argazkiak += resultado.enviadas;
+        resumen.fallidas += resultado.fallidas.length;
+      }
+
+      if (!resumen.argazkiak) {
+        setFallo('Ezin izan da argazkirik bidali. Saiatu berriro edo erabili «Fitxategi gisa bidali».');
         return;
       }
-      setHecho(resultado);
+      setHecho(resumen);
     } catch (e) {
       setFallo(mensajeDeFallo(e));
     } finally {
       setEnviando(null);
       setProgreso(null);
+      setCual(null);
     }
   };
 
   const enviarArchivo = async () => {
     setEnviando('archivo');
     setFallo(null);
-    try {
-      recordar();
-      const { blob, nombre } = await empaquetarEnvio(datos, fotos.map((f) => f.archivo));
-      const archivo = new File([blob], nombre, { type: 'application/zip' });
+    recordar();
 
-      if (navigator.canShare?.({ files: [archivo] }) && navigator.share) {
+    try {
+      // Un paquete por taller, también aquí: al abrirlos en la aplicación
+      // cada uno conserva su ficha.
+      const archivos: File[] = [];
+      for (const [indice, taller] of talleres.entries()) {
+        setCual({ indice, total: talleres.length });
+        const { blob, nombre } = await empaquetarEnvio(
+          datosDe(taller),
+          taller.fotos.map((f) => f.archivo),
+        );
+        archivos.push(new File([blob], nombre, { type: 'application/zip' }));
+      }
+
+      const resumen: Resumen = { talleres: talleres.length, argazkiak: totalFotos, fallidas: 0 };
+
+      if (navigator.canShare?.({ files: archivos }) && navigator.share) {
         try {
-          await navigator.share({ files: [archivo], title: titulo });
-          setHecho({ idEnvio: '', enviadas: fotos.length, fallidas: [] });
+          await navigator.share({ files: archivos, title: talleres[0].titulo });
+          setHecho(resumen);
           return;
         } catch (e) {
           if (e instanceof DOMException && e.name === 'AbortError') return;
         }
       }
-      descargarBlob(blob, nombre);
-      setHecho({ idEnvio: '', enviadas: fotos.length, fallidas: [] });
+      for (const archivo of archivos) descargarBlob(archivo, archivo.name);
+      setHecho(resumen);
     } catch (e) {
       setFallo(mensajeDeFallo(e));
     } finally {
       setEnviando(null);
+      setCual(null);
     }
   };
 
@@ -209,27 +259,21 @@ export function Formulario() {
           </div>
           <h1>Eskerrik asko!</h1>
           <p>
-            {hecho.enviadas === 1
-              ? 'Argazki 1 bidali da'
-              : `${hecho.enviadas} argazki bidali dira`}
-            .
-            <br />
-            <strong>{titulo}</strong>
+            {hecho.argazkiak === 1 ? 'Argazki 1 bidali da' : `${hecho.argazkiak} argazki bidali dira`}
+            {hecho.talleres > 1 && `, ${hecho.talleres} tailerretan banatuta`}.
           </p>
-          {hecho.fallidas.length > 0 && (
+          {hecho.fallidas > 0 && (
             <p className="formulario__aviso">
-              {hecho.fallidas.length}{' '}
-              {hecho.fallidas.length === 1 ? 'argazki ezin izan da bidali' : 'argazki ezin izan dira bidali'}.
+              {hecho.fallidas}{' '}
+              {hecho.fallidas === 1 ? 'argazki ezin izan da bidali' : 'argazki ezin izan dira bidali'}.
             </p>
           )}
           <button
             type="button"
             className="boton boton--primario"
             onClick={() => {
-              fotos.forEach((f) => URL.revokeObjectURL(f.url));
-              setFotos([]);
-              setTitulo('');
-              setNotas('');
+              talleres.forEach((t) => t.fotos.forEach((f) => URL.revokeObjectURL(f.url)));
+              setTalleres([tallerNuevo(talleres[0]?.lugar ?? '')]);
               setHecho(null);
             }}
           >
@@ -312,42 +356,7 @@ export function Formulario() {
       )}
 
       <div className="tarjeta">
-        <label className="campo">
-          <span className="campo__etiqueta">Tailerraren izenburua *</span>
-          <input
-            className="entrada"
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
-            placeholder="adib. Makrame tailerra Getxon"
-            maxLength={90}
-          />
-        </label>
-
-        <div className="formulario__pareja">
-          <label className="campo">
-            <span className="campo__etiqueta">Data *</span>
-            <input
-              className="entrada"
-              type="date"
-              value={fecha}
-              max={hoy()}
-              onChange={(e) => setFecha(e.target.value)}
-            />
-          </label>
-
-          <label className="campo">
-            <span className="campo__etiqueta">Lekua *</span>
-            <input
-              className="entrada"
-              value={lugar}
-              onChange={(e) => setLugar(e.target.value)}
-              placeholder="adib. Algortako ludoteka"
-              maxLength={80}
-            />
-          </label>
-        </div>
-
-        <label className="campo">
+        <label className="campo" style={{ marginBottom: 16 }}>
           <span className="campo__etiqueta">Zure izena</span>
           <input
             className="entrada"
@@ -358,139 +367,62 @@ export function Formulario() {
           />
         </label>
 
-        <label className="campo" style={{ marginBottom: 0 }}>
-          <span className="campo__etiqueta">Oharrak</span>
-          <textarea
-            className="area"
-            value={notas}
-            onChange={(e) => setNotas(e.target.value)}
-            placeholder="Jakitea komeni den edozer (aukerakoa)"
-            maxLength={400}
-          />
-        </label>
+        <span className="campo__etiqueta">Zenbat tailer bidali behar dituzu?</span>
+        <div className="contador">
+          <button
+            type="button"
+            className="boton"
+            onClick={() => cambiarCuantos(talleres.length - 1)}
+            disabled={ocupado || talleres.length <= 1}
+            aria-label="Tailer bat gutxiago"
+          >
+            −
+          </button>
+          <output className="contador__valor" aria-live="polite">
+            {talleres.length}
+          </output>
+          <button
+            type="button"
+            className="boton"
+            onClick={() => cambiarCuantos(talleres.length + 1)}
+            disabled={ocupado || talleres.length >= MAXIMO_TALLERES}
+            aria-label="Tailer bat gehiago"
+          >
+            +
+          </button>
+          <span className="contador__ayuda">
+            {talleres.length === 1
+              ? 'Tailer bakarra'
+              : 'Bakoitzak bere datuak eta bere argazkiak ditu.'}
+          </span>
+        </div>
       </div>
 
-      <div className="tarjeta">
-        <h2 className="tarjeta__titulo">Materialak</h2>
-        <p className="tarjeta__ayuda">
-          Zer erabili duzue? Ukitu erabilitako guztiak.
-        </p>
-
-        <div className="materiales">
-          {MATERIALES.map((m) => {
-            const elegido = materiales.includes(m.id);
-            return (
-              <button
-                key={m.id}
-                type="button"
-                className="material"
-                aria-pressed={elegido}
-                onClick={() =>
-                  setMateriales((previos) =>
-                    previos.includes(m.id)
-                      ? previos.filter((x) => x !== m.id)
-                      : [...previos, m.id],
-                  )
-                }
-              >
-                <span aria-hidden="true">{m.emoji}</span>
-                {m.eu}
-              </button>
-            );
-          })}
-        </div>
-
-        <label className="campo" style={{ marginTop: 14, marginBottom: 0 }}>
-          <span className="campo__etiqueta">Besterik?</span>
-          <input
-            className="entrada"
-            value={otrosMateriales}
-            onChange={(e) => setOtrosMateriales(e.target.value)}
-            placeholder="Komaz bereizita"
-            maxLength={160}
-          />
-        </label>
-      </div>
-
-      <div className="tarjeta">
-        <div className="tarjeta__titulo">
-          <IconoCarpeta style={{ width: 19, height: 19 }} />
-          <h2>Argazkiak *</h2>
-        </div>
-        <p className="tarjeta__ayuda">
-          Aukeratu tailerreko argazkiak. Bidali aurretik txikitu egiten dira, beraz ia ez dute
-          daturik kontsumitzen.
-        </p>
-
-        <div
-          className="zona-soltar"
-          role="button"
-          tabIndex={0}
-          onClick={() => entrada.current?.click()}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && entrada.current?.click()}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            anadir(e.dataTransfer.files);
-          }}
-        >
-          <div>
-            <strong>{fotos.length ? 'Argazki gehiago' : 'Aukeratu argazkiak'}</strong>
-            <div style={{ color: 'var(--texto-2)', fontSize: '0.85rem', marginTop: 4 }}>
-              {fotos.length
-                ? `${fotos.length} argazki · ${formatearBytes(pesoTotal)}`
-                : `Gehienez ${LIMITE_FOTOS} argazki`}
-            </div>
-          </div>
-        </div>
-        <input
-          ref={entrada}
-          type="file"
-          accept="image/*"
-          multiple
-          className="sr-solo"
-          onChange={(e) => {
-            anadir(e.target.files ?? []);
-            e.target.value = '';
-          }}
+      {talleres.map((taller, indice) => (
+        <BloqueTaller
+          key={taller.clave}
+          taller={taller}
+          indice={indice}
+          total={talleres.length}
+          ocupado={ocupado}
+          alCambiar={(cambios) => cambiarTaller(taller.clave, cambios)}
+          alQuitar={() => quitarTaller(taller.clave)}
         />
-
-        {fotos.length > 0 && (
-          <div className="formulario__tiras">
-            {fotos.map((foto, indice) => (
-              <div className="formulario__tira" key={`${foto.archivo.name}-${indice}`}>
-                <img src={foto.url} alt={foto.archivo.name} loading="lazy" />
-                <button
-                  type="button"
-                  className="formulario__quitar"
-                  onClick={() => quitar(indice)}
-                  aria-label={`${foto.archivo.name} kendu`}
-                  disabled={ocupado}
-                >
-                  <IconoCerrar />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {fotos.length >= LIMITE_FOTOS && (
-          <p className="formulario__aviso">
-            {LIMITE_FOTOS} argazkiko mugara iritsi zara. Bidali gainerakoak beste bidalketa batean.
-          </p>
-        )}
-      </div>
+      ))}
 
       {fallo && <div className="aviso-linea aviso-linea--error">{fallo}</div>}
 
-      {progreso && progreso.fase !== 'hecho' && (
+      {(progreso || cual) && (
         <div className="progreso">
           <div className="progreso__barra">
             <div className="progreso__relleno" style={{ width: `${porcentaje}%` }} />
           </div>
           <div className="progreso__texto">
-            <span>{progreso.fase === 'preparando' ? 'Argazkiak prestatzen' : 'Bidaltzen'}…</span>
-            <span>{progreso.hechas}/{progreso.total}</span>
+            <span>
+              {cual && cual.total > 1 && `${cual.indice + 1}/${cual.total} · `}
+              {progreso?.fase === 'preparando' ? 'Argazkiak prestatzen' : 'Bidaltzen'}…
+            </span>
+            {progreso && <span>{progreso.hechas}/{progreso.total}</span>}
           </div>
         </div>
       )}
@@ -499,7 +431,7 @@ export function Formulario() {
         <button
           type="button"
           className="boton boton--primario boton--ancho"
-          disabled={!listo || ocupado}
+          disabled={!listos || ocupado}
           onClick={() => void enviarBuzon()}
         >
           {enviando === 'buzon' ? (
@@ -507,13 +439,17 @@ export function Formulario() {
           ) : (
             <IconoCompartir className="boton__icono" />
           )}
-          {enviando === 'buzon' ? 'Bidaltzen…' : 'Arimara bidali'}
+          {enviando === 'buzon'
+            ? 'Bidaltzen…'
+            : talleres.length > 1
+              ? `Bidali ${talleres.length} tailerrak`
+              : 'Arimara bidali'}
         </button>
 
         <button
           type="button"
           className="boton boton--ancho"
-          disabled={!listo || ocupado}
+          disabled={!listos || ocupado}
           onClick={() => void enviarArchivo()}
         >
           {enviando === 'archivo' ? (
@@ -524,10 +460,16 @@ export function Formulario() {
           Fitxategi gisa bidali
         </button>
 
+        {!listos && (
+          <p className="formulario__aviso" style={{ margin: 0 }}>
+            Osatu tailer guztien izenburua, data, lekua eta argazkiak.
+          </p>
+        )}
+
         <p className="formulario__pie">
           «Arimara bidali» aukerak argazkiak zuzenean igotzen ditu. «Fitxategi gisa bidali»
-          aukerak fitxategi bakar bat prestatzen du WhatsApp bidez bidaltzeko: erabili
-          estaldurarik ez baduzu edo bidalketak huts egiten badu.
+          aukerak fitxategi bat prestatzen du tailer bakoitzeko, WhatsApp bidez bidaltzeko:
+          erabili estaldurarik ez baduzu edo bidalketak huts egiten badu.
         </p>
       </div>
 
@@ -563,3 +505,5 @@ export function Formulario() {
     </div>
   );
 }
+
+export type { Elegida };

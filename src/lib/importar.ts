@@ -3,7 +3,7 @@ import { SIN_CLASIFICAR } from '../taxonomy';
 import { guardarFoto, guardarImagenes, idsGoogleExistentes, obtenerFoto } from './db';
 import { crearMiniatura, dimensiones, fechaExif, huella, reescalar } from './image';
 import { descargarFoto as descargarDeGoogle, listarSeleccion, type ElementoSeleccionado } from './googlePicker';
-import { leerEnvio, type EnvioLeido } from './envio';
+import { leerEnvio, nombreDeFoto, type EnvioLeido } from './envio';
 
 export interface ProgresoImportacion {
   fase: 'preparando' | 'descargando' | 'guardando' | 'hecho';
@@ -228,7 +228,7 @@ export async function importarEnvio(
     : fechaEvento.toISOString();
 
   let hechas = 0;
-  for (const foto of fotos) {
+  for (const [posicion, foto] of fotos.entries()) {
     alProgresar?.({ fase: 'guardando', hechas, total: fotos.length, actual: foto.nombre });
     try {
       const id = `envio-${manifiesto.id}-${await huella(foto.blob)}`;
@@ -243,7 +243,7 @@ export async function importarEnvio(
         origen: 'envio',
         evento,
         archivoOriginal: foto.nombre.replace(/^fotos\//, ''),
-        nombre: manifiesto.titulo,
+        nombre: nombreDeFoto(manifiesto.titulo, posicion, fotos.length),
         tipoMime: completa.type || 'image/jpeg',
         ancho,
         alto,

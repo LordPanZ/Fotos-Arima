@@ -140,3 +140,61 @@
   color: var(--texto-2);
 }
 .formulario__repartir span { flex: 1; min-width: 150px; }
+
+/* ----------------------------------------------------- varios talleres */
+
+.contador { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.contador .boton {
+  width: 42px;
+  padding: 8px 0;
+  font-size: 1.15rem;
+  line-height: 1;
+  justify-content: center;
+}
+.contador__valor {
+  min-width: 36px;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.contador__ayuda { flex: 1; min-width: 140px; font-size: 0.8rem; color: var(--texto-2); }
+
+.bloque { margin-top: 22px; }
+/* La franja de color separa un taller del siguiente de un vistazo. */
+.bloque__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radio) var(--radio) 0 0;
+  background: var(--acento-suave);
+  border: 1px solid var(--acento);
+  border-bottom: 0;
+}
+.bloque__cabecera + .tarjeta { border-radius: 0 0 var(--radio) var(--radio); }
+
+.bloque__numero {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--acento);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.bloque__resumen { flex: 1; min-width: 0; line-height: 1.3; }
+.bloque__resumen strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--acento-fuerte);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bloque__resumen span { font-size: 0.76rem; color: var(--texto-2); }
+
+.bloque[data-completo='false'] .bloque__numero { background: var(--aviso); }

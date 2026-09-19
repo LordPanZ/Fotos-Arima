@@ -232,9 +232,10 @@ try {
   );
 
   comprobar(
-    'El título del taller es el nombre de la foto',
-    catalogo.fichas.every((f) => f.nombre === 'Taller de macramé en Getxo' && f.nombreEditado),
-    catalogo.fichas[0]?.nombre,
+    'El título nombra las fotos, numeradas y sin repetirse',
+    catalogo.fichas.every((f) => /^Taller de macramé en Getxo \d{2}$/.test(f.nombre) && f.nombreEditado)
+      && new Set(catalogo.fichas.map((f) => f.nombre)).size === catalogo.fichas.length,
+    catalogo.fichas.map((f) => f.nombre).join(' | '),
   );
 
   comprobar(
@@ -329,7 +330,7 @@ try {
   const nombreEnApp = await app.locator('.hoja input.entrada').first().inputValue();
   comprobar(
     'El nombre sigue siendo el título tras analizar',
-    nombreEnApp === 'Taller de macramé en Getxo',
+    /^Taller de macramé en Getxo \d{2}$/.test(nombreEnApp),
     nombreEnApp,
   );
 
@@ -384,6 +385,85 @@ try {
     avisos.some((t) => /Taller de macram/.test(t) && /Revisar/.test(t)),
     avisos.join(' | '),
   );
+
+  /* -------------------- varios talleres en un envío, sin mezclarse */
+  catalogo.fichas.length = 0;
+  catalogo.porEntregar.length = 0;
+
+  const multi = await contexto.newPage();
+  multi.on('pageerror', (e) => errores.push(String(e)));
+  await montarServidorFalso(multi);
+  await multi.goto(`${base}formulario/`, { waitUntil: 'networkidle' });
+
+  await multi.getByRole('button', { name: 'Tailer bat gehiago' }).click();
+  await multi.waitForTimeout(300);
+  comprobar('Pedir dos talleres muestra dos bloques', (await multi.locator('.bloque').count()) === 2);
+
+  await multi.getByLabel('Zure izena').fill('Aitziber');
+
+  const titulos = multi.getByLabel('Tailerraren izenburua *');
+  const lugares = multi.getByLabel('Lekua *');
+  const fechas = multi.getByLabel('Data *');
+  const entradas = multi.locator('input[accept="image/*"]');
+
+  await titulos.nth(0).fill('Makrame tailerra Getxon');
+  await lugares.nth(0).fill('Algortako ludoteka');
+  await fechas.nth(0).fill('2026-09-15');
+  await multi.locator('.bloque').nth(0).getByRole('button', { name: /feltroa/ }).click();
+  await entradas.nth(0).setInputFiles(rutas.slice(0, 2));
+
+  await titulos.nth(1).fill('Zeramika tailerra Sopelan');
+  await lugares.nth(1).fill('Sopelako eskola');
+  await fechas.nth(1).fill('2026-09-16');
+  await multi.locator('.bloque').nth(1).getByRole('button', { name: /buztina/ }).click();
+  await entradas.nth(1).setInputFiles(rutas.slice(2, 3));
+  await multi.waitForTimeout(400);
+
+  comprobar(
+    'El lugar del segundo no pisa al del primero',
+    (await lugares.nth(0).inputValue()) === 'Algortako ludoteka',
+  );
+
+  await multi.getByRole('button', { name: 'Bidali 2 tailerrak' }).click();
+  await multi.waitForSelector('.formulario__hecho', { timeout: 40000 });
+
+  const porEnvio = new Map();
+  for (const f of catalogo.fichas) {
+    const lista = porEnvio.get(f.evento?.idEnvio) ?? [];
+    lista.push(f);
+    porEnvio.set(f.evento?.idEnvio, lista);
+  }
+
+  comprobar('Cada taller viaja como un envío aparte', porEnvio.size === 2, `envíos: ${porEnvio.size}`);
+  comprobar('Llegan las tres fotos', catalogo.fichas.length === 3, String(catalogo.fichas.length));
+
+  const grupos = [...porEnvio.values()];
+  const macrame = grupos.find((g) => g[0].evento.titulo.startsWith('Makrame'));
+  const ceramica = grupos.find((g) => g[0].evento.titulo.startsWith('Zeramika'));
+
+  comprobar(
+    'Las fotos no se mezclan entre talleres',
+    macrame?.length === 2 && ceramica?.length === 1,
+    `${macrame?.length} / ${ceramica?.length}`,
+  );
+  comprobar(
+    'Cada taller conserva su lugar y su fecha',
+    macrame?.every((f) => f.evento.lugar === 'Algortako ludoteka' && f.fecha.startsWith('2026-09-15'))
+      && ceramica?.every((f) => f.evento.lugar === 'Sopelako eskola' && f.fecha.startsWith('2026-09-16')),
+  );
+  comprobar(
+    'Cada taller lleva sus propios materiales',
+    macrame?.every((f) => f.etiquetas.includes('fieltro') && !f.etiquetas.includes('arcilla'))
+      && ceramica?.every((f) => f.etiquetas.includes('arcilla') && !f.etiquetas.includes('fieltro')),
+    JSON.stringify([macrame?.[0]?.etiquetas, ceramica?.[0]?.etiquetas]),
+  );
+  comprobar(
+    'El de dos fotos las numera; el de una, no',
+    macrame?.every((f) => /Makrame tailerra Getxon \d{2}$/.test(f.nombre))
+      && ceramica?.[0]?.nombre === 'Zeramika tailerra Sopelan',
+    `${macrame?.map((f) => f.nombre).join(', ')} | ${ceramica?.[0]?.nombre}`,
+  );
+  await multi.close();
 
   comprobar('Sin errores de JavaScript', errores.length === 0, errores.slice(0, 3).join(' | '));
 } finally {

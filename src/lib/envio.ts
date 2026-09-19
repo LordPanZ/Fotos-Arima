@@ -48,6 +48,18 @@ export interface EnvioLeido {
   fotos: Array<{ nombre: string; blob: Blob }>;
 }
 
+/**
+ * Nombre de cada foto de un taller.
+ *
+ * Cuando el envío trae varias, se numeran para poder distinguirlas de un
+ * vistazo en la galería; si es una sola, el número sobra.
+ */
+export function nombreDeFoto(titulo: string, indice: number, total: number): string {
+  const limpio = titulo.trim();
+  if (total <= 1) return limpio;
+  return `${limpio} ${String(indice + 1).padStart(2, '0')}`;
+}
+
 export function nuevoIdEnvio(): string {
   return `env-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
