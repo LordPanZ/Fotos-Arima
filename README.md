@@ -38,7 +38,12 @@ vez. También descarga directa y exportación a ZIP con carpetas por tipo y un
 
 ---
 
-## Empezar
+## Dónde está
+
+**https://lordpanz.github.io/Fotos-Arima/** — instalable desde el navegador en
+el móvil y en el ordenador.
+
+## Empezar (desarrollo)
 
 ```bash
 npm install

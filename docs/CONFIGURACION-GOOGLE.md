@@ -25,59 +25,73 @@ Se hace **una sola vez** y tarda unos diez minutos. Al terminar tendrás un
 
 ## 2. Activar la API del Selector
 
-1. Ve a **APIs y servicios › Biblioteca**.
-2. Busca **Photos Picker API**.
-3. Ábrela y pulsa **Habilitar**.
+1. Ve a **APIs y servicios › Biblioteca**, o directamente a
+   <https://console.cloud.google.com/apis/library/photospicker.googleapis.com>.
+2. Comprueba que el título dice **«Photos Picker API»** y pulsa **Habilitar**.
 
-> Si te aparece también «Photos Library API», no la actives: no hace falta y sus
-> permisos de lectura ya no están disponibles.
+> **Ojo con el nombre.** Existe otra API llamada «Google Picker API», que es
+> para elegir archivos de Google Drive y no sirve aquí. Tampoco actives la
+> «Photos Library API»: sus permisos de lectura ya no están disponibles.
 
 ## 3. Configurar la pantalla de consentimiento
 
-1. Ve a **APIs y servicios › Pantalla de consentimiento de OAuth**.
-2. Tipo de usuario: **Externo**. Pulsa **Crear**.
-3. Rellena lo mínimo:
-   - Nombre de la aplicación: `Fotos Arima`
-   - Correo de asistencia: `arimacooltour@gmail.com`
-   - Datos de contacto del desarrollador: `arimacooltour@gmail.com`
-4. En **Permisos**, pulsa **Añadir o quitar permisos**, busca y marca:
+Google reorganizó esta parte de la consola: lo que antes era «Pantalla de
+consentimiento de OAuth» ahora es **Google Auth Platform**, con cuatro
+pestañas — **Branding**, **Audience**, **Data Access** y **Clients**.
+
+1. Ve a <https://console.cloud.google.com/auth/overview>.
+2. Si es la primera vez, te recibe un asistente **«Get started»** de cuatro
+   bloques. Rellénalo:
+   - **App name**: `Fotos Arima`
+   - **User support email**: `arimacooltour@gmail.com`
+   - **Audience**: **External**
+   - **Contact information**: `arimacooltour@gmail.com`
+   - Acepta la política y pulsa **Create**.
+3. Pestaña **Data Access** (<https://console.cloud.google.com/auth/scopes>):
+   pulsa **Add or remove scopes**, busca `photospicker` y marca:
 
    ```
    https://www.googleapis.com/auth/photospicker.mediaitems.readonly
    ```
 
-5. En **Usuarios de prueba**, añade `arimacooltour@gmail.com` y cualquier otra
-   cuenta que vaya a usar la app.
-6. Guarda.
+   Pulsa **Update** y luego **Save**.
 
-> **Deja el proyecto en estado «Prueba».** Para uso personal es suficiente y no
-> necesitas que Google verifique la aplicación. Admite hasta 100 usuarios de
-> prueba. Verás una pantalla de aviso al dar permiso la primera vez: pulsa
-> **Configuración avanzada › Ir a Fotos Arima**.
+   > Si el buscador no lo encuentra, pégalo a mano en el recuadro
+   > **«Manually add scopes»** y pulsa **Add to table**.
+
+4. Pestaña **Audience** (<https://console.cloud.google.com/auth/audience>):
+   en **Test users** pulsa **Add users**, escribe `arimacooltour@gmail.com` y
+   guarda. Añade también cualquier otra cuenta que vaya a usar la app.
+
+> **Deja la aplicación en estado «Testing».** Para uso personal es suficiente y
+> no necesitas que Google verifique nada. Admite hasta 100 usuarios de prueba.
+> La primera vez que des permiso verás una pantalla de aviso: pulsa
+> **Configuración avanzada › Ir a Fotos Arima (no seguro)**. Es lo esperable en
+> una app propia sin verificar.
 
 ## 4. Crear el ID de cliente
 
-1. Ve a **APIs y servicios › Credenciales**.
-2. **Crear credenciales › ID de cliente de OAuth**.
-3. Tipo de aplicación: **Aplicación web**.
-4. Nombre: `Fotos Arima web`.
-5. En **Orígenes autorizados de JavaScript**, añade una entrada por cada sitio
-   desde el que vayas a abrir la app:
+1. Pestaña **Clients** (<https://console.cloud.google.com/auth/clients>).
+2. Pulsa **Create client**.
+3. **Application type**: **Web application**.
+4. **Name**: `Fotos Arima web`.
+5. En **Authorized JavaScript origins**, pulsa **Add URI** y añade una entrada
+   por cada sitio desde el que abras la app:
 
    | Dónde usas la app | Qué añadir |
    |---|---|
+   | Publicada en GitHub Pages | `https://lordpanz.github.io` |
    | Desarrollo con `npm run dev` | `http://localhost:5173` |
    | Aplicación de escritorio (Electron) | `http://localhost:4173` |
-   | Publicada en GitHub Pages | `https://TU-USUARIO.github.io` |
    | Publicada en otro dominio | `https://tu-dominio.com` |
 
    > Se pone **solo el origen**: protocolo, dominio y puerto. Sin la ruta y sin
    > barra final. Aunque la app viva en `https://usuario.github.io/Fotos-Arima/`,
    > el origen es `https://usuario.github.io`.
 
-6. **No hace falta rellenar «URIs de redirección autorizados»**: la app usa el
-   modelo de token de Google Identity Services, que no redirige.
-7. Pulsa **Crear** y copia el **ID de cliente**. Tiene esta pinta:
+6. **No hace falta rellenar «Authorized redirect URIs»**: la app usa el modelo
+   de token de Google Identity Services, que no redirige.
+7. Pulsa **Create** y copia el **Client ID**. Tiene esta pinta:
 
    ```
    123456789012-a1b2c3d4e5f6g7h8.apps.googleusercontent.com
@@ -102,8 +116,8 @@ VITE_GOOGLE_CLIENT_ID=123456789012-a1b2c3d4e5f6g7h8.apps.googleusercontent.com
 
 | Lo que ves | Qué pasa |
 |---|---|
-| «Google no admite este origen» o `redirect_uri_mismatch` | El origen desde el que abres la app no está en la lista del paso 5. Compruébalo en Ajustes: la app te muestra el origen exacto que debes añadir. Los cambios en Google Cloud pueden tardar unos minutos. |
-| «Google ha denegado el acceso» (403) | Falta activar la Photos Picker API (paso 2), o la cuenta no está entre los usuarios de prueba (paso 3.5). |
+| «Google no admite este origen» o `redirect_uri_mismatch` | El origen desde el que abres la app no está en **Authorized JavaScript origins** (paso 4.5). Compruébalo en Ajustes: la app te muestra el origen exacto que debes añadir. Los cambios en Google Cloud pueden tardar unos minutos en surtir efecto. |
+| «Google ha denegado el acceso» (403) | Falta activar la Photos Picker API (paso 2), o la cuenta no está en **Test users** (paso 3.4), o falta el permiso en **Data Access** (paso 3.3). |
 | «La sesión de Google ha caducado» | Normal: el token dura una hora. Vuelve a pulsar el botón de importar. |
 | La ventana del selector no se abre | El navegador la ha bloqueado como emergente. Permite las ventanas emergentes para este sitio. |
 | «El navegador ha bloqueado la descarga de la foto» | Alguna extensión o una política del navegador está cortando la petición. La aplicación de escritorio no tiene esta limitación. |
