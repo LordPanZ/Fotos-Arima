@@ -209,6 +209,7 @@ export async function importarEnvio(
     lugar: manifiesto.lugar,
     monitor: manifiesto.monitor,
     notas: manifiesto.notas,
+    materiales: manifiesto.materiales,
     idEnvio: manifiesto.id,
   };
 
@@ -251,6 +252,7 @@ export async function importarEnvio(
         importadaEl: new Date().toISOString(),
       });
 
+      ficha.materiales = evento.materiales ?? [];
       await guardarFoto(ficha);
       resultado.nuevas.push(ficha);
     } catch (error) {

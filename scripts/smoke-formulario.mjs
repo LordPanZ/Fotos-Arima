@@ -146,6 +146,9 @@ async function rellenar(pagina, rutas) {
   await pagina.getByLabel('Data *').fill('2026-09-15');
   await pagina.getByLabel('Lekua *').fill('Ludoteca de Algorta');
   await pagina.getByLabel('Zure izena').fill('Aitziber');
+  await pagina.getByRole('button', { name: /feltroa/ }).click();
+  await pagina.getByRole('button', { name: /silikona pistola/ }).click();
+  await pagina.getByLabel('Besterik?').fill('lentejuelas');
   await pagina.locator('input[type=file]').setInputFiles(rutas);
   await pagina.waitForTimeout(500);
 }
@@ -184,6 +187,17 @@ try {
   comprobar('Confirma el envío', (await pagina.locator('.formulario__hecho h1').textContent())?.includes('Eskerrik'));
   comprobar('Sube las dos fotos al catálogo', catalogo.fichas.length === 2, `subidas: ${catalogo.fichas.length}`);
   comprobar(
+    'Manda los materiales que marcó el monitor',
+    catalogo.fichas.every(
+      (f) => f.evento?.materiales?.includes('fieltro')
+        && f.evento?.materiales?.includes('pistola termofusible')
+        && f.evento?.materiales?.includes('lentejuelas')
+        && f.materiales?.includes('fieltro'),
+    ),
+    JSON.stringify(catalogo.fichas[0]?.evento?.materiales),
+  );
+
+  comprobar(
     'Las manda con los datos del taller',
     catalogo.fichas.every(
       (f) => f.evento?.titulo === 'Taller de macramé en Getxo'
@@ -194,6 +208,30 @@ try {
     ),
     JSON.stringify(catalogo.fichas[0]?.evento),
   );
+
+  /* --------------------------------------- el formulario es instalable */
+  const form3 = await contexto.newPage();
+  await montarServidorFalso(form3);
+  await form3.goto(`${base}formulario/`, { waitUntil: 'networkidle' });
+  const manifiestoUrl = await form3.getAttribute('link[rel=manifest]', 'href');
+  comprobar('El formulario tiene manifiesto propio', Boolean(manifiestoUrl), String(manifiestoUrl));
+
+  const manifiesto = await (
+    await form3.request.get(new URL(manifiestoUrl, `${base}formulario/`).href)
+  ).json();
+  comprobar('Se instala con su propio nombre', manifiesto.name === 'Tailerren Argazkiak Arima', manifiesto.name);
+  comprobar('Tiene ámbito propio', /\/formulario\/$/.test(new URL(manifiesto.scope, `${base}formulario/`).pathname));
+  comprobar('Se abre en su propia ventana', manifiesto.display === 'standalone');
+  for (const icono of manifiesto.icons ?? []) {
+    const r = await form3.request.get(new URL(icono.src, new URL(manifiestoUrl, `${base}formulario/`)).href);
+    comprobar(`El icono ${icono.sizes} carga`, r.ok(), `HTTP ${r.status()}`);
+  }
+  const sw = await form3.evaluate(async () => {
+    const reg = await navigator.serviceWorker.getRegistration();
+    return reg ? reg.scope : null;
+  });
+  comprobar('Un service worker lo controla', Boolean(sw), String(sw));
+  await form3.close();
 
   /* ------------------------------ la app las recibe y van a «Revisar» */
   const app = await contexto.newPage();
@@ -209,6 +247,31 @@ try {
   await app.waitForTimeout(900);
   const enRevisar = await app.locator('.vacio h3, .revision__marco').count();
   comprobar('La pantalla de revisión tiene trabajo', enRevisar > 0);
+
+  // Los datos del formulario tienen que verse en la ficha de la foto.
+  await app.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
+  await app.getByRole('button', { name: 'Todas', exact: true }).click();
+  await app.waitForSelector('.ficha__marco', { timeout: 10000 });
+  await app.locator('.ficha__marco').first().click();
+  await app.waitForSelector('.hoja', { timeout: 10000 });
+
+  const ficha = (await app.locator('.datos').textContent()) ?? '';
+  comprobar('La ficha muestra el taller', /Taller de macram/.test(ficha), ficha.slice(0, 120));
+  comprobar('La ficha muestra el lugar', /Algorta/.test(ficha));
+  comprobar('La ficha dice quién la envió', /Aitziber/.test(ficha));
+  comprobar(
+    'La ficha conserva los materiales del monitor',
+    /fieltro/.test(ficha) && /termofusible/.test(ficha),
+    ficha.slice(0, 200),
+  );
+
+  await app.getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await app.waitForTimeout(400);
+
+  // Y la búsqueda tiene que encontrarlas por el taller.
+  await app.getByLabel('Buscar en el catálogo').fill('Algorta');
+  await app.waitForTimeout(500);
+  comprobar('Se buscan por el lugar del taller', (await app.locator('.ficha').count()) === 2);
 
   /* --------------------------------------------- camino 2: el archivo */
   const form2 = await contexto.newPage();

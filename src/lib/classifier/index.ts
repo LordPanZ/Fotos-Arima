@@ -22,7 +22,11 @@ export function aplicarResultado(
     categoria: resultado.categoria,
     categoriaAlternativa: resultado.categoriaAlternativa,
     tecnica: resultado.tecnica,
-    materiales: resultado.materiales,
+    // Lo que marcó el monitor en el formulario no se pierde al analizar: él
+    // estuvo en el taller y el modelo solo ve la foto.
+    materiales: foto.evento?.materiales?.length
+      ? [...new Set([...foto.evento.materiales, ...resultado.materiales])]
+      : resultado.materiales,
     colores: resultado.colores,
     etiquetas: resultado.etiquetas,
     descripcion: resultado.descripcion,

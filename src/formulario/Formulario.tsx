@@ -5,8 +5,9 @@ import { descargarBlob } from '../lib/share';
 import { ErrorNube } from '../lib/nube';
 import {
   IconoCarpeta, IconoCerrar, IconoCompartir, IconoComprobado,
-  IconoDescargar, IconoLogo, IconoRefrescar,
+  IconoDescargar, IconoInstalar, IconoLogo, IconoRefrescar,
 } from '../components/Icons';
+import { MATERIALES, nombresEnCastellano } from '../materiales';
 
 const RECUERDA = 'arima.formulario.monitor';
 const LIMITE_FOTOS = 60;
@@ -40,12 +41,20 @@ interface Elegida {
   url: string;
 }
 
+interface EventoInstalacion extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 export function Formulario() {
   const [titulo, setTitulo] = useState('');
   const [fecha, setFecha] = useState(hoy);
   const [lugar, setLugar] = useState('');
   const [monitor, setMonitor] = useState('');
   const [notas, setNotas] = useState('');
+  const [materiales, setMateriales] = useState<string[]>([]);
+  const [otrosMateriales, setOtrosMateriales] = useState('');
+  const [instalador, setInstalador] = useState<EventoInstalacion | null>(null);
   const [fotos, setFotos] = useState<Elegida[]>([]);
 
   const [progreso, setProgreso] = useState<ProgresoEnvio | null>(null);
@@ -54,6 +63,16 @@ export function Formulario() {
   const [fallo, setFallo] = useState<string | null>(null);
 
   const entrada = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const capturar = (e: Event) => {
+      e.preventDefault();
+      setInstalador(e as EventoInstalacion);
+    };
+    window.addEventListener('beforeinstallprompt', capturar);
+    window.addEventListener('appinstalled', () => setInstalador(null));
+    return () => window.removeEventListener('beforeinstallprompt', capturar);
+  }, []);
 
   // El nombre y el lugar se repiten envío tras envío: se recuerdan.
   useEffect(() => {
@@ -74,8 +93,20 @@ export function Formulario() {
   useEffect(() => () => vivas.current.forEach((f) => URL.revokeObjectURL(f.url)), []);
 
   const datos: DatosFormulario = useMemo(
-    () => ({ titulo, fecha, lugar, monitor, notas }),
-    [titulo, fecha, lugar, monitor, notas],
+    () => ({
+      titulo,
+      fecha,
+      lugar,
+      monitor,
+      notas,
+      // Se guardan en castellano, que es el idioma del catálogo, aunque el
+      // monitor los haya elegido con los rótulos en euskera.
+      materiales: [
+        ...nombresEnCastellano(materiales),
+        ...otrosMateriales.split(',').map((m) => m.trim().toLowerCase()).filter(Boolean),
+      ],
+    }),
+    [titulo, fecha, lugar, monitor, notas, materiales, otrosMateriales],
   );
 
   const pesoTotal = fotos.reduce((suma, f) => suma + f.archivo.size, 0);
@@ -218,6 +249,27 @@ export function Formulario() {
         </div>
       </header>
 
+      {instalador && (
+        <div className="panel-instalar">
+          <IconoInstalar style={{ width: 22, height: 22, flex: 'none' }} />
+          <div className="panel-instalar__texto">
+            <strong>Instalatu formularioa</strong> zure mugikorrean, hurrengoan azkarrago
+            irekitzeko.
+          </div>
+          <button
+            type="button"
+            className="boton boton--primario boton--pequeno"
+            onClick={async () => {
+              await instalador.prompt();
+              await instalador.userChoice;
+              setInstalador(null);
+            }}
+          >
+            Instalatu
+          </button>
+        </div>
+      )}
+
       <div className="tarjeta">
         <label className="campo">
           <span className="campo__etiqueta">Tailerraren izenburua *</span>
@@ -273,6 +325,48 @@ export function Formulario() {
             onChange={(e) => setNotas(e.target.value)}
             placeholder="Jakitea komeni den edozer (aukerakoa)"
             maxLength={400}
+          />
+        </label>
+      </div>
+
+      <div className="tarjeta">
+        <h2 className="tarjeta__titulo">Materialak</h2>
+        <p className="tarjeta__ayuda">
+          Zer erabili duzue? Ukitu erabilitako guztiak.
+        </p>
+
+        <div className="materiales">
+          {MATERIALES.map((m) => {
+            const elegido = materiales.includes(m.id);
+            return (
+              <button
+                key={m.id}
+                type="button"
+                className="material"
+                aria-pressed={elegido}
+                onClick={() =>
+                  setMateriales((previos) =>
+                    previos.includes(m.id)
+                      ? previos.filter((x) => x !== m.id)
+                      : [...previos, m.id],
+                  )
+                }
+              >
+                <span aria-hidden="true">{m.emoji}</span>
+                {m.eu}
+              </button>
+            );
+          })}
+        </div>
+
+        <label className="campo" style={{ marginTop: 14, marginBottom: 0 }}>
+          <span className="campo__etiqueta">Besterik?</span>
+          <input
+            className="entrada"
+            value={otrosMateriales}
+            onChange={(e) => setOtrosMateriales(e.target.value)}
+            placeholder="Komaz bereizita"
+            maxLength={160}
           />
         </label>
       </div>

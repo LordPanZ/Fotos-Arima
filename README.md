@@ -15,8 +15,9 @@ funcionando sin conexión y sincroniza cuando vuelve.
 
 **Importar.** Desde Google Fotos a través del selector oficial de Google,
 arrastrando archivos (por ejemplo una descarga de Google Takeout), o desde el
-formulario **Tailerren Argazkiak Arima**, con el que los monitores mandan las
-fotos de sus talleres — [docs/FORMULARIO-MONITORES.md](docs/FORMULARIO-MONITORES.md).
+formulario **Tailerren Argazkiak Arima** (en euskera, instalable aparte), con el
+que los monitores mandan las fotos de sus talleres con título, fecha, lugar y
+los materiales usados — [docs/FORMULARIO-MONITORES.md](docs/FORMULARIO-MONITORES.md).
 
 **Afinar la selección.** Un modelo de visión decide si cada foto muestra una
 manualidad y con cuánta seguridad. Descarta retratos sin pieza, paisajes,

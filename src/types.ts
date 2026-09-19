@@ -7,6 +7,8 @@ export interface Evento {
   /** Quién envía. Sirve para saber a quién preguntar si algo no cuadra. */
   monitor?: string;
   notas?: string;
+  /** Materiales que marcó el monitor, en castellano. */
+  materiales?: string[];
   /** Identificador del envío al que pertenece la foto. */
   idEnvio: string;
 }

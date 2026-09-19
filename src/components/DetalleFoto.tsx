@@ -272,6 +272,29 @@ export function DetalleFoto({ foto, contexto, alCerrar, alCambiarFoto }: Props) 
             </label>
 
             <div className="datos" style={{ margin: '16px 0' }}>
+              {foto.evento && (
+                <>
+                  <div className="dato">
+                    <span className="dato__clave">Taller</span>
+                    <span className="dato__valor">
+                      <strong>{foto.evento.titulo}</strong>
+                      {foto.evento.lugar && <> · {foto.evento.lugar}</>}
+                    </span>
+                  </div>
+                  {foto.evento.monitor && (
+                    <div className="dato">
+                      <span className="dato__clave">Enviada por</span>
+                      <span className="dato__valor">{foto.evento.monitor}</span>
+                    </div>
+                  )}
+                  {foto.evento.notas && (
+                    <div className="dato">
+                      <span className="dato__clave">Notas</span>
+                      <span className="dato__valor">{foto.evento.notas}</span>
+                    </div>
+                  )}
+                </>
+              )}
               {foto.materiales.length > 0 && (
                 <div className="dato">
                   <span className="dato__clave">Materiales</span>

@@ -95,3 +95,29 @@
 .formulario__marca-ok svg { width: 30px; height: 30px; }
 .formulario__hecho h1 { font-size: 1.5rem; margin-bottom: 8px; }
 .formulario__hecho p { color: var(--texto-2); max-width: 40ch; margin: 0 auto 18px; }
+
+/* ------------------------------------------------------------ materiales */
+
+.materiales { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.material {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto-2);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transicion);
+}
+.material:hover { border-color: var(--borde-fuerte); }
+.material[aria-pressed='true'] {
+  background: var(--acento-suave);
+  border-color: var(--acento);
+  color: var(--acento-fuerte);
+}

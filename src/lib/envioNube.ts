@@ -43,6 +43,7 @@ export async function enviarAlBuzon(
     lugar: datos.lugar.trim(),
     monitor: datos.monitor?.trim() || undefined,
     notas: datos.notas?.trim() || undefined,
+    materiales: datos.materiales?.length ? datos.materiales : undefined,
     idEnvio,
   };
 
@@ -88,7 +89,9 @@ export async function enviarAlBuzon(
             entraEnCatalogo: null,
             confianza: 0,
             categoria: SIN_CLASIFICAR,
-            materiales: [],
+            // Lo que marcó el monitor entra ya en la ficha; el clasificador
+            // añadirá después lo que vea en la foto.
+            materiales: evento.materiales ?? [],
             colores: [],
             etiquetas: [],
             motor: null,

@@ -27,6 +27,7 @@ function coincide(foto: Foto, consulta: string): boolean {
   const texto = [
     foto.nombre, foto.archivoOriginal, foto.descripcion, foto.tecnica,
     categoria(foto.categoria).nombre, ...foto.etiquetas, ...foto.materiales, ...foto.colores,
+    foto.evento?.titulo, foto.evento?.lugar, foto.evento?.monitor,
   ]
     .filter(Boolean)
     .join(' ')

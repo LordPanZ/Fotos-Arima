@@ -28,6 +28,8 @@ export interface ManifiestoEnvio {
   lugar: string;
   monitor?: string;
   notas?: string;
+  /** Materiales elegidos en el formulario, en castellano. */
+  materiales?: string[];
   creadoEl: string;
   fotos: FotoDeEnvio[];
 }
@@ -38,6 +40,7 @@ export interface DatosFormulario {
   lugar: string;
   monitor?: string;
   notas?: string;
+  materiales?: string[];
 }
 
 export interface EnvioLeido {
@@ -100,6 +103,7 @@ export async function empaquetarEnvio(
     lugar: datos.lugar.trim(),
     monitor: datos.monitor?.trim() || undefined,
     notas: datos.notas?.trim() || undefined,
+    materiales: datos.materiales?.length ? datos.materiales : undefined,
     creadoEl: new Date().toISOString(),
     fotos,
   };
@@ -133,6 +137,9 @@ function validarManifiesto(datos: unknown): ManifiestoEnvio {
     lugar: typeof m.lugar === 'string' ? m.lugar : '',
     monitor: typeof m.monitor === 'string' ? m.monitor : undefined,
     notas: typeof m.notas === 'string' ? m.notas : undefined,
+    materiales: Array.isArray(m.materiales)
+      ? m.materiales.filter((x): x is string => typeof x === 'string')
+      : undefined,
     creadoEl: typeof m.creadoEl === 'string' ? m.creadoEl : new Date().toISOString(),
     fotos: m.fotos as FotoDeEnvio[],
   };
