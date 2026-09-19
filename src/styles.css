@@ -704,3 +704,21 @@ a { color: var(--acento); }
   font: inherit;
   font-size: 0.8rem;
 }
+
+/* ------------------------------------------------ catálogo compartido */
+
+.sincro { position: relative; }
+.sincro__cuenta {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--acento);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}

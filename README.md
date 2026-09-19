@@ -4,9 +4,10 @@ Catálogo de manualidades para la cuenta de Google Fotos de **arimacooltour@gmai
 Importa las fotos, se queda solo con las manualidades, las **agrupa por tipo**,
 les pone nombre y te deja **editarlo y compartirlas**.
 
-Es una aplicación instalable en el móvil y en el ordenador. Funciona sin
-conexión y guarda todo en el propio dispositivo: no hay servidor ni cuenta que
-crear.
+Es una aplicación instalable en el móvil y en el ordenador, con **catálogo
+compartido**: lo que sube cualquiera del equipo aparece en el aparato del otro,
+sin cuentas ni registro. Cada dispositivo guarda su copia, así que sigue
+funcionando sin conexión y sincroniza cuando vuelve.
 
 ---
 
@@ -113,9 +114,14 @@ consideraciones de privacidad están en [docs/COMO-FUNCIONA.md](docs/COMO-FUNCIO
 
 ---
 
-## Privacidad
+## Catálogo compartido y privacidad
 
-Las fotos y sus fichas se quedan en tu dispositivo. El permiso de Google es de
+Las fotos viven en tu dispositivo **y** en un catálogo común (Supabase) para que
+el equipo vea lo mismo. Cómo sincroniza, qué cuesta y cómo protegerlo con
+código: [docs/CATALOGO-COMPARTIDO.md](docs/CATALOGO-COMPARTIDO.md).
+
+El catálogo está **abierto**: quien conozca la dirección puede ver y editar. El
+almacén de imágenes sí es privado y no indexable. El permiso de Google es de
 solo lectura y alcanza únicamente a las fotos que marcas en el selector. Con la
 clasificación por IA activada se envía una copia reducida de cada foto a
 `api.anthropic.com` mientras dura el análisis, y nada más. Los originales de

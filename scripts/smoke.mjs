@@ -139,6 +139,81 @@ const erroresConsola = [];
 pagina.on('pageerror', (e) => erroresConsola.push(String(e)));
 pagina.on('console', (m) => m.type() === 'error' && erroresConsola.push(m.text()));
 
+/*
+ * Servidor de mentira del catálogo compartido. Sustituye a Supabase, que desde
+ * este entorno no es accesible, y permite comprobar de verdad que la app sube
+ * lo que crea y aplica lo que le llega de otro aparato.
+ */
+const servidorFalso = { subidas: [], borradas: [], pendientesDeEntregar: [] };
+
+/** Ficha como la que subiría el otro aparato del equipo. */
+function fotoDeAitzi(id) {
+  const ahora = new Date().toISOString();
+  return {
+    id,
+    ficha: {
+      id,
+      origen: 'local',
+      archivoOriginal: 'taza.jpg',
+      nombre: 'Cerámica y arcilla - taza azul de Aitzi - 2026-09-19',
+      nombreEditado: false,
+      tipoMime: 'image/jpeg',
+      ancho: 300, alto: 300, bytes: 1234,
+      fecha: ahora, importadaEl: ahora, actualizadaEn: ahora,
+      estado: 'listo', entraEnCatalogo: true, confianza: 0.95,
+      categoria: 'ceramica-arcilla',
+      materiales: ['barro'], colores: ['azul'], etiquetas: ['taza'],
+      descripcion: 'taza azul de Aitzi',
+      motor: 'ia', revision: 'auto', favorita: false,
+    },
+    borrada: false,
+    actualizadoEn: ahora,
+    miniatura: `https://catalogo.falso/m/${id}`,
+  };
+}
+
+await pagina.route('**/functions/v1/catalogo*', async (ruta) => {
+  const peticion = ruta.request();
+
+  if (peticion.method() === 'GET') {
+    // Se entrega la cola y se vacía, como haría el servidor real avanzando la marca.
+    const cambios = servidorFalso.pendientesDeEntregar.splice(0);
+    return ruta.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ cambios, hasta: new Date().toISOString(), hayMas: false }),
+    });
+  }
+
+  const cuerpo = JSON.parse(peticion.postData() ?? '{}');
+  const responder = (datos) =>
+    ruta.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(datos) });
+
+  if (cuerpo.accion === 'subir') {
+    return responder({
+      enlaces: cuerpo.ids.map((id) => ({
+        id,
+        completa: `https://catalogo.falso/c/${id}`,
+        miniatura: `https://catalogo.falso/m/${id}`,
+      })),
+    });
+  }
+  if (cuerpo.accion === 'guardar') {
+    servidorFalso.subidas.push(...cuerpo.fichas.map((f) => f.id));
+    return responder({ guardadas: cuerpo.fichas.length });
+  }
+  if (cuerpo.accion === 'borrar') {
+    servidorFalso.borradas.push(...cuerpo.ids);
+    return responder({ borradas: cuerpo.ids.length });
+  }
+  return responder({});
+});
+
+// Subidas y bajadas de imágenes contra el almacén de mentira.
+await pagina.route('https://catalogo.falso/**', (ruta) =>
+  ruta.fulfill({ status: 200, contentType: 'image/jpeg', body: Buffer.from([0xff, 0xd8, 0xff, 0xd9]) }),
+);
+
 try {
   await pagina.goto(base, { waitUntil: 'networkidle' });
 
@@ -261,6 +336,33 @@ try {
   await pagina.getByRole('button', { name: 'Ajustes', exact: true }).first().click();
   await pagina.waitForSelector('.tabla-tokens', { timeout: 10000 });
   comprobar('Los ajustes muestran la plantilla de nombres', await pagina.locator('.tabla-tokens').isVisible());
+
+  // ------------------------------------------- catálogo compartido
+  comprobar(
+    'La foto importada se envía al catálogo compartido',
+    servidorFalso.subidas.length > 0,
+    `subidas: ${servidorFalso.subidas.length}`,
+  );
+
+  // Lo que sube la otra persona del equipo tiene que aparecer aquí.
+  servidorFalso.pendientesDeEntregar.push(fotoDeAitzi('foto-de-aitzi-1'));
+  await pagina.getByRole('button', { name: /^Sincronizar/ }).click();
+  await pagina.waitForTimeout(2000);
+
+  // La comprobación es sobre la galería, así que hay que volver a ella.
+  await pagina.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
+  await pagina.getByLabel('Buscar en el catálogo').fill('');
+  await pagina.waitForTimeout(600);
+
+  comprobar(
+    'Llega la foto que subió la otra persona',
+    (await pagina.locator('.ficha__nombre').allTextContents()).some((t) => /Aitzi/.test(t)),
+    `en pantalla: ${(await pagina.locator('.ficha__nombre').allTextContents()).join(' | ')}`,
+  );
+  comprobar(
+    'Se agrupa en su categoría',
+    (await pagina.locator('.grupo__nombre').allTextContents()).some((t) => /Cerámica/.test(t)),
+  );
 
   // El menú debe caber entero también en las pantallas más estrechas.
   for (const ancho of [320, 390]) {

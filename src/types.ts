@@ -38,6 +38,8 @@ export interface Foto {
   /** Fecha de captura (ISO). Si no se conoce, la de importación. */
   fecha: string;
   importadaEl: string;
+  /** Marca del último cambio local. Decide quién gana al sincronizar. */
+  actualizadaEn: string;
 
   estado: EstadoAnalisis;
   /** `true` si es una manualidad o una actividad de Arima; `false` si no. */

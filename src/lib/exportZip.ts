@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import type { Foto } from '../types';
 import { categoria } from '../taxonomy';
-import { obtenerCompleta } from './db';
+import { obtenerCompleta } from './sync';
 import { extensionDe, limpiarNombre } from './naming';
 import { descargarBlob } from './share';
 

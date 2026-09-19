@@ -44,7 +44,8 @@ export function Ajustes() {
         {
           id: 'x', origen: 'local', archivoOriginal: 'IMG_2043.jpg', nombre: '', nombreEditado: false,
           tipoMime: 'image/jpeg', ancho: 0, alto: 0, bytes: 0,
-          fecha: '2024-05-12T10:00:00.000Z', importadaEl: '', estado: 'listo',
+          fecha: '2024-05-12T10:00:00.000Z', importadaEl: '',
+          actualizadaEn: '2024-05-12T10:00:00.000Z', estado: 'listo',
           entraEnCatalogo: true, confianza: 0.9, categoria: 'macrame-fibras',
           tecnica: 'nudo plano', materiales: ['algodón'], colores: ['beige'],
           etiquetas: [], descripcion: 'colgante de pared', motor: 'ia',

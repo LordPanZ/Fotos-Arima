@@ -20,9 +20,10 @@ export interface ResultadoImportacion {
 
 const TIPOS_ACEPTADOS = /^image\/(jpeg|png|webp|gif|avif|heic|heif)$/i;
 
-function fichaVacia(base: Omit<Foto, 'estado' | 'entraEnCatalogo' | 'confianza' | 'categoria' | 'materiales' | 'colores' | 'etiquetas' | 'motor' | 'revision' | 'favorita' | 'nombreEditado'>): Foto {
+function fichaVacia(base: Omit<Foto, 'estado' | 'entraEnCatalogo' | 'confianza' | 'categoria' | 'materiales' | 'colores' | 'etiquetas' | 'motor' | 'revision' | 'favorita' | 'nombreEditado' | 'actualizadaEn'>): Foto {
   return {
     ...base,
+    actualizadaEn: new Date().toISOString(),
     nombreEditado: false,
     estado: 'pendiente',
     entraEnCatalogo: null,

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { obtenerCompleta, urlMiniatura } from '../lib/db';
+import { urlMiniatura } from '../lib/db';
+import { obtenerCompleta } from '../lib/sync';
 import type { ProgresoAnalisis } from '../types';
 import { useTienda } from '../state/store';
 import { IconoAviso, IconoCerrar, IconoRefrescar } from './Icons';

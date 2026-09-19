@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Ajustes, Foto, ProgresoAnalisis, ResultadoClasificacion } from '../../types';
 import { NO_MANUALIDAD, SIN_CLASIFICAR } from '../../taxonomy';
-import { obtenerCompleta } from '../db';
+import { obtenerCompleta } from '../sync';
 import { nombreDesdePlantilla } from '../naming';
 import { clasificarConIA, hayClaveIA, mensajeDeError } from './ai';
 import { clasificarEnLocal } from './heuristic';

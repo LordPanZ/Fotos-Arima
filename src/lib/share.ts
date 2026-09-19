@@ -1,6 +1,6 @@
 import type { Foto } from '../types';
 import { categoria, esActividad } from '../taxonomy';
-import { obtenerCompleta } from './db';
+import { obtenerCompleta } from './sync';
 import { nombreArchivo } from './naming';
 
 export type ResultadoCompartir = 'compartido' | 'cancelado' | 'no-soportado';

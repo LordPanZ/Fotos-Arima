@@ -8,7 +8,8 @@ import { Ajustes } from './views/Ajustes';
 import { Avisos, Cargando } from './components/comunes';
 import { DialogoCompartir } from './components/DialogoCompartir';
 import {
-  IconoAjustes, IconoBiblioteca, IconoImportar, IconoInstalar, IconoLogo, IconoRevisar,
+  IconoAjustes, IconoBiblioteca, IconoImportar, IconoInstalar, IconoLogo,
+  IconoRefrescar, IconoRevisar,
 } from './components/Icons';
 
 type Seccion = 'biblioteca' | 'importar' | 'revisar' | 'ajustes';
@@ -36,7 +37,7 @@ interface EventoInstalacion extends Event {
 }
 
 function Interfaz() {
-  const { cargando, fotos, ajustes } = useTienda();
+  const { cargando, fotos, ajustes, sincronizando, sinSubir, sincronizar } = useTienda();
   const [seccion, setSeccion] = useState<Seccion>(seccionDelHash);
   const [instalador, setInstalador] = useState<EventoInstalacion | null>(null);
   const [ocultarPanel, setOcultarPanel] = useState(
@@ -81,11 +82,30 @@ function Interfaz() {
           <div>
             <div className="barra__titulo">Fotos Arima</div>
             <div className="barra__sub">
-              {fotos.length ? `${fotos.length} fotos en el catálogo` : 'Catálogo de manualidades'}
+              {fotos.length ? `${fotos.length} fotos · catálogo compartido` : 'Catálogo compartido'}
             </div>
           </div>
         </div>
         <div className="barra__espacio" />
+
+        <button
+          type="button"
+          className="boton boton--fantasma boton--pequeno sincro"
+          onClick={() => void sincronizar()}
+          disabled={sincronizando}
+          aria-label={
+            sincronizando
+              ? 'Sincronizando con el catálogo compartido'
+              : sinSubir > 0
+                ? `Sincronizar, ${sinSubir} cambios sin enviar`
+                : 'Sincronizar con el catálogo compartido'
+          }
+          title="Catálogo compartido"
+        >
+          <IconoRefrescar className={`boton__icono${sincronizando ? ' giro' : ''}`} />
+          {sinSubir > 0 && !sincronizando && <span className="sincro__cuenta">{sinSubir}</span>}
+        </button>
+
         {instalador && (
           <button
             type="button"
