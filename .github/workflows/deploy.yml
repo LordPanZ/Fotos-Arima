@@ -2,7 +2,6 @@ name: Publicar en GitHub Pages
 
 on:
   push:
-    branches: [main]
   # Permite publicar a mano desde cualquier rama (Actions › Ejecutar workflow).
   workflow_dispatch:
 
@@ -17,6 +16,12 @@ concurrency:
 
 jobs:
   compilar:
+    # Solo publica la rama por defecto del repositorio, se llame como se llame.
+    # Así el workflow sigue funcionando si un día se renombra a «main», y las
+    # ramas de trabajo no pisan el sitio publicado.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
