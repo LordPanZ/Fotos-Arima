@@ -16,10 +16,27 @@ Para instalarla en el móvil hace falta que esté publicada en una dirección
 El repositorio ya trae el flujo de trabajo `.github/workflows/deploy.yml`.
 
 1. En GitHub: **Settings › Pages › Build and deployment › Source: GitHub Actions**.
-2. Sube los cambios a la rama principal. El flujo compila y publica solo.
+
+   > **Este paso hay que hacerlo a mano la primera vez.** El `GITHUB_TOKEN` de
+   > Actions no puede activar Pages por su cuenta (`Create Pages site failed:
+   > Resource not accessible by integration`), aunque el workflow lo intente con
+   > `enablement: true`. Mientras Pages esté desactivado, el trabajo falla en el
+   > paso `configure-pages` aunque la compilación haya ido bien.
+
+2. Sube los cambios a la rama por defecto del repositorio. El flujo compila y
+   publica solo; también puedes lanzarlo a mano desde **Actions › Publicar en
+   GitHub Pages › Run workflow**.
 3. La app queda en `https://TU-USUARIO.github.io/Fotos-Arima/`.
 4. Añade `https://TU-USUARIO.github.io` a los orígenes autorizados en Google Cloud
    (ver [CONFIGURACION-GOOGLE.md](CONFIGURACION-GOOGLE.md), paso 4).
+
+Para comprobar antes de publicar que la app seguirá siendo instalable desde un
+subdirectorio:
+
+```bash
+VITE_BASE=/Fotos-Arima/ npm run build
+BASE_PUBLICA=/Fotos-Arima/ npm run verificar-pwa
+```
 
 > Si publicas en la raíz de un dominio propio, compila con `VITE_BASE=/`.
 
