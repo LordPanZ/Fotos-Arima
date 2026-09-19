@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { empaquetarEnvio, type DatosFormulario } from '../lib/envio';
 import { enviarAlBuzon, type ProgresoEnvio, type ResultadoEnvio } from '../lib/envioNube';
 import { descargarBlob } from '../lib/share';
+import { ErrorNube } from '../lib/nube';
 import {
   IconoCarpeta, IconoCerrar, IconoCompartir, IconoComprobado,
   IconoDescargar, IconoLogo, IconoRefrescar,
@@ -14,6 +15,19 @@ function hoy(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Los módulos que comparte con la aplicación dan sus errores en castellano.
+ * Aquí se traduce lo que el monitor necesita entender, y el detalle técnico se
+ * conserva por si hay que diagnosticar algo.
+ */
+function mensajeDeFallo(e: unknown): string {
+  if (e instanceof ErrorNube) {
+    return 'Ezin izan da Arimarekin konektatu. Begiratu estaldura duzun eta saiatu berriro, '
+      + 'edo erabili «Fitxategi gisa bidali».';
+  }
+  return `Zerbaitek huts egin du: ${e instanceof Error ? e.message : String(e)}`;
 }
 
 function formatearBytes(bytes: number): string {
@@ -107,13 +121,14 @@ export function Formulario() {
       recordar();
       const resultado = await enviarAlBuzon(datos, fotos.map((f) => f.archivo), setProgreso);
       if (!resultado.enviadas) {
-        throw new Error(resultado.fallidas[0]?.motivo ?? 'No se ha podido enviar ninguna foto.');
+        setFallo(
+          'Ezin izan da argazkirik bidali. Saiatu berriro edo erabili «Fitxategi gisa bidali».',
+        );
+        return;
       }
       setHecho(resultado);
     } catch (e) {
-      setFallo(
-        `${e instanceof Error ? e.message : String(e)} — Si no hay cobertura, usa «Mandar como archivo».`,
-      );
+      setFallo(mensajeDeFallo(e));
     } finally {
       setEnviando(null);
       setProgreso(null);
@@ -140,7 +155,7 @@ export function Formulario() {
       descargarBlob(blob, nombre);
       setHecho({ idEnvio: '', enviadas: fotos.length, fallidas: [] });
     } catch (e) {
-      setFallo(e instanceof Error ? e.message : String(e));
+      setFallo(mensajeDeFallo(e));
     } finally {
       setEnviando(null);
     }
@@ -158,14 +173,16 @@ export function Formulario() {
           <h1>Eskerrik asko!</h1>
           <p>
             {hecho.enviadas === 1
-              ? 'Se ha enviado 1 foto'
-              : `Se han enviado ${hecho.enviadas} fotos`}{' '}
-            de <strong>{titulo}</strong>.
+              ? 'Argazki 1 bidali da'
+              : `${hecho.enviadas} argazki bidali dira`}
+            .
+            <br />
+            <strong>{titulo}</strong>
           </p>
           {hecho.fallidas.length > 0 && (
             <p className="formulario__aviso">
               {hecho.fallidas.length}{' '}
-              {hecho.fallidas.length === 1 ? 'foto no se ha podido enviar' : 'fotos no se han podido enviar'}.
+              {hecho.fallidas.length === 1 ? 'argazki ezin izan da bidali' : 'argazki ezin izan dira bidali'}.
             </p>
           )}
           <button
@@ -179,7 +196,7 @@ export function Formulario() {
               setHecho(null);
             }}
           >
-            Enviar otro taller
+            Beste tailer bat bidali
           </button>
         </div>
       </div>
@@ -197,25 +214,25 @@ export function Formulario() {
         <IconoLogo className="formulario__logo" />
         <div>
           <h1>Tailerren Argazkiak</h1>
-          <p>Envía aquí las fotos del taller y llegarán directas al catálogo de Arima.</p>
+          <p>Bidali hemen tailerreko argazkiak eta zuzenean Arimaren katalogora iritsiko dira.</p>
         </div>
       </header>
 
       <div className="tarjeta">
         <label className="campo">
-          <span className="campo__etiqueta">Título del taller *</span>
+          <span className="campo__etiqueta">Tailerraren izenburua *</span>
           <input
             className="entrada"
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
-            placeholder="p. ej. Taller de macramé en Getxo"
+            placeholder="adib. Makrame tailerra Getxon"
             maxLength={90}
           />
         </label>
 
         <div className="formulario__pareja">
           <label className="campo">
-            <span className="campo__etiqueta">Fecha *</span>
+            <span className="campo__etiqueta">Data *</span>
             <input
               className="entrada"
               type="date"
@@ -226,35 +243,35 @@ export function Formulario() {
           </label>
 
           <label className="campo">
-            <span className="campo__etiqueta">Lugar *</span>
+            <span className="campo__etiqueta">Lekua *</span>
             <input
               className="entrada"
               value={lugar}
               onChange={(e) => setLugar(e.target.value)}
-              placeholder="p. ej. Ludoteca de Algorta"
+              placeholder="adib. Algortako ludoteka"
               maxLength={80}
             />
           </label>
         </div>
 
         <label className="campo">
-          <span className="campo__etiqueta">Tu nombre</span>
+          <span className="campo__etiqueta">Zure izena</span>
           <input
             className="entrada"
             value={monitor}
             onChange={(e) => setMonitor(e.target.value)}
-            placeholder="Para saber a quién preguntar"
+            placeholder="Nori galdetu jakiteko"
             maxLength={60}
           />
         </label>
 
         <label className="campo" style={{ marginBottom: 0 }}>
-          <span className="campo__etiqueta">Notas</span>
+          <span className="campo__etiqueta">Oharrak</span>
           <textarea
             className="area"
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
-            placeholder="Cualquier cosa que convenga saber (opcional)"
+            placeholder="Jakitea komeni den edozer (aukerakoa)"
             maxLength={400}
           />
         </label>
@@ -263,10 +280,11 @@ export function Formulario() {
       <div className="tarjeta">
         <div className="tarjeta__titulo">
           <IconoCarpeta style={{ width: 19, height: 19 }} />
-          <h2>Fotos *</h2>
+          <h2>Argazkiak *</h2>
         </div>
         <p className="tarjeta__ayuda">
-          Elige las fotos del taller. Se reducen antes de enviarse, así que no gastan apenas datos.
+          Aukeratu tailerreko argazkiak. Bidali aurretik txikitu egiten dira, beraz ia ez dute
+          daturik kontsumitzen.
         </p>
 
         <div
@@ -282,11 +300,11 @@ export function Formulario() {
           }}
         >
           <div>
-            <strong>{fotos.length ? 'Añadir más fotos' : 'Elegir fotos'}</strong>
+            <strong>{fotos.length ? 'Argazki gehiago' : 'Aukeratu argazkiak'}</strong>
             <div style={{ color: 'var(--texto-2)', fontSize: '0.85rem', marginTop: 4 }}>
               {fotos.length
-                ? `${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'} · ${formatearBytes(pesoTotal)}`
-                : `Hasta ${LIMITE_FOTOS} fotos`}
+                ? `${fotos.length} argazki · ${formatearBytes(pesoTotal)}`
+                : `Gehienez ${LIMITE_FOTOS} argazki`}
             </div>
           </div>
         </div>
@@ -311,7 +329,7 @@ export function Formulario() {
                   type="button"
                   className="formulario__quitar"
                   onClick={() => quitar(indice)}
-                  aria-label={`Quitar ${foto.archivo.name}`}
+                  aria-label={`${foto.archivo.name} kendu`}
                   disabled={ocupado}
                 >
                   <IconoCerrar />
@@ -323,7 +341,7 @@ export function Formulario() {
 
         {fotos.length >= LIMITE_FOTOS && (
           <p className="formulario__aviso">
-            Has llegado al máximo de {LIMITE_FOTOS} fotos. Manda el resto en otro envío.
+            {LIMITE_FOTOS} argazkiko mugara iritsi zara. Bidali gainerakoak beste bidalketa batean.
           </p>
         )}
       </div>
@@ -336,7 +354,7 @@ export function Formulario() {
             <div className="progreso__relleno" style={{ width: `${porcentaje}%` }} />
           </div>
           <div className="progreso__texto">
-            <span>{progreso.fase === 'preparando' ? 'Preparando las fotos' : 'Enviando'}…</span>
+            <span>{progreso.fase === 'preparando' ? 'Argazkiak prestatzen' : 'Bidaltzen'}…</span>
             <span>{progreso.hechas}/{progreso.total}</span>
           </div>
         </div>
@@ -354,7 +372,7 @@ export function Formulario() {
           ) : (
             <IconoCompartir className="boton__icono" />
           )}
-          {enviando === 'buzon' ? 'Enviando…' : 'Enviar a Arima'}
+          {enviando === 'buzon' ? 'Bidaltzen…' : 'Arimara bidali'}
         </button>
 
         <button
@@ -368,12 +386,13 @@ export function Formulario() {
           ) : (
             <IconoDescargar className="boton__icono" />
           )}
-          Mandar como archivo
+          Fitxategi gisa bidali
         </button>
 
         <p className="formulario__pie">
-          «Enviar a Arima» sube las fotos directamente. «Mandar como archivo» prepara un único
-          archivo para que lo envíes por WhatsApp: úsalo si estás sin cobertura o si el envío falla.
+          «Arimara bidali» aukerak argazkiak zuzenean igotzen ditu. «Fitxategi gisa bidali»
+          aukerak fitxategi bakar bat prestatzen du WhatsApp bidez bidaltzeko: erabili
+          estaldurarik ez baduzu edo bidalketak huts egiten badu.
         </p>
       </div>
     </div>

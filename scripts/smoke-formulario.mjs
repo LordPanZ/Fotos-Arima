@@ -142,10 +142,10 @@ async function fotosDePrueba(pagina, carpeta, cuantas) {
 }
 
 async function rellenar(pagina, rutas) {
-  await pagina.getByLabel('Título del taller *').fill('Taller de macramé en Getxo');
-  await pagina.getByLabel('Fecha *').fill('2026-09-15');
-  await pagina.getByLabel('Lugar *').fill('Ludoteca de Algorta');
-  await pagina.getByLabel('Tu nombre').fill('Aitziber');
+  await pagina.getByLabel('Tailerraren izenburua *').fill('Taller de macramé en Getxo');
+  await pagina.getByLabel('Data *').fill('2026-09-15');
+  await pagina.getByLabel('Lekua *').fill('Ludoteca de Algorta');
+  await pagina.getByLabel('Zure izena').fill('Aitziber');
   await pagina.locator('input[type=file]').setInputFiles(rutas);
   await pagina.waitForTimeout(500);
 }
@@ -170,7 +170,7 @@ try {
   );
   comprobar(
     'No se puede enviar vacío',
-    await pagina.getByRole('button', { name: /Enviar a Arima/ }).isDisabled(),
+    await pagina.getByRole('button', { name: /Arimara bidali/ }).isDisabled(),
   );
 
   await rellenar(pagina, rutas);
@@ -179,7 +179,7 @@ try {
   await pagina.locator('.formulario__quitar').first().click();
   comprobar('Se puede quitar una foto', (await pagina.locator('.formulario__tira').count()) === 2);
 
-  await pagina.getByRole('button', { name: /Enviar a Arima/ }).click();
+  await pagina.getByRole('button', { name: /Arimara bidali/ }).click();
   await pagina.waitForSelector('.formulario__hecho', { timeout: 30000 });
   comprobar('Confirma el envío', (await pagina.locator('.formulario__hecho h1').textContent())?.includes('Eskerrik'));
   comprobar('Sube las dos fotos al catálogo', catalogo.fichas.length === 2, `subidas: ${catalogo.fichas.length}`);
@@ -218,7 +218,7 @@ try {
   await rellenar(form2, rutas);
 
   const esperaDescarga = form2.waitForEvent('download', { timeout: 30000 });
-  await form2.getByRole('button', { name: /Mandar como archivo/ }).click();
+  await form2.getByRole('button', { name: /Fitxategi gisa bidali/ }).click();
   const descarga = await esperaDescarga;
   const paquete = join(carpeta, descarga.suggestedFilename());
   await descarga.saveAs(paquete);
