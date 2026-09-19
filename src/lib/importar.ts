@@ -252,7 +252,12 @@ export async function importarEnvio(
         importadaEl: new Date().toISOString(),
       });
 
-      ficha.materiales = evento.materiales ?? [];
+      // El título lo escribió el monitor, así que cuenta como nombre puesto a
+      // mano: ni el análisis ni la plantilla lo sobrescriben.
+      ficha.nombreEditado = true;
+      // Los materiales que marcó van a las etiquetas, que es donde se buscan
+      // y se editan en la aplicación.
+      ficha.etiquetas = evento.materiales ?? [];
       await guardarFoto(ficha);
       resultado.nuevas.push(ficha);
     } catch (error) {

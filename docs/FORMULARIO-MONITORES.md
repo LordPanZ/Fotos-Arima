@@ -40,21 +40,31 @@ catálogo, la búsqueda y los nombres de archivo estén en un solo idioma. La
 correspondencia está en `src/materiales.ts`: añadir uno ahí lo hace aparecer en
 el formulario automáticamente.
 
-Lo que marca el monitor **no se pierde al analizar la foto**. El clasificador
-añade lo que ve en la imagen, pero no borra lo que puso quien estuvo en el
-taller.
+Los materiales marcados llegan a la foto como **etiquetas**, que es donde se
+buscan y se editan en la app. El clasificador añade las suyas, pero no borra las
+de quien estuvo en el taller.
 
 ## Qué llega a cada foto
 
 Cada foto guarda la ficha del taller entera, y se ve al abrirla en la app:
 
-| En la ficha | De dónde sale |
+| En la foto | De dónde sale |
 |---|---|
+| **Nombre** | El título del taller, tal cual |
+| **Etiquetas** | Los materiales marcados, más las que añada el clasificador |
 | **Taller** | Título y lugar del formulario |
 | **Enviada por** | Nombre del monitor |
 | **Notas** | Lo que escribiera |
-| **Materiales** | Los botones marcados, más lo que detecte el clasificador |
 | **Fecha** | La del formulario, no la del archivo |
+
+El nombre y las etiquetas **sobreviven al análisis**. El título cuenta como
+nombre puesto a mano —lo escribió una persona—, así que la plantilla no lo
+sobrescribe, y las etiquetas del clasificador se suman a las del monitor en vez
+de sustituirlas.
+
+Si quieres que las fotos de un taller se llamen de otra forma, cámbiales el
+nombre en la app como cualquier otra, o usa «Aplicar a todas» en
+Ajustes › Nombres para forzar la plantilla.
 
 Todo eso **se puede buscar** desde el catálogo: escribiendo «Algorta» salen las
 fotos de los talleres de ese sitio.

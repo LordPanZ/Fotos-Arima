@@ -77,7 +77,9 @@ export async function enviarAlBuzon(
             evento,
             archivoOriginal: archivo.name,
             nombre: evento.titulo,
-            nombreEditado: false,
+            // El título lo escribió el monitor: cuenta como nombre puesto a
+            // mano y la plantilla no lo sobrescribe al analizar la foto.
+            nombreEditado: true,
             tipoMime: completa.type || 'image/jpeg',
             ancho,
             alto,
@@ -89,11 +91,11 @@ export async function enviarAlBuzon(
             entraEnCatalogo: null,
             confianza: 0,
             categoria: SIN_CLASIFICAR,
-            // Lo que marcó el monitor entra ya en la ficha; el clasificador
-            // añadirá después lo que vea en la foto.
-            materiales: evento.materiales ?? [],
+            materiales: [],
             colores: [],
-            etiquetas: [],
+            // Los materiales marcados son las etiquetas de la foto; el
+            // clasificador añadirá después las suyas sin borrarlas.
+            etiquetas: evento.materiales ?? [],
             motor: null,
             revision: 'auto',
             favorita: false,

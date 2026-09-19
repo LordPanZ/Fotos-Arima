@@ -187,14 +187,21 @@ try {
   comprobar('Confirma el envío', (await pagina.locator('.formulario__hecho h1').textContent())?.includes('Eskerrik'));
   comprobar('Sube las dos fotos al catálogo', catalogo.fichas.length === 2, `subidas: ${catalogo.fichas.length}`);
   comprobar(
-    'Manda los materiales que marcó el monitor',
+    'Los materiales marcados llegan como etiquetas',
     catalogo.fichas.every(
       (f) => f.evento?.materiales?.includes('fieltro')
         && f.evento?.materiales?.includes('pistola termofusible')
         && f.evento?.materiales?.includes('lentejuelas')
-        && f.materiales?.includes('fieltro'),
+        && f.etiquetas?.includes('fieltro')
+        && f.etiquetas?.includes('pistola termofusible'),
     ),
     JSON.stringify(catalogo.fichas[0]?.evento?.materiales),
+  );
+
+  comprobar(
+    'El título del taller es el nombre de la foto',
+    catalogo.fichas.every((f) => f.nombre === 'Taller de macramé en Getxo' && f.nombreEditado),
+    catalogo.fichas[0]?.nombre,
   );
 
   comprobar(
@@ -248,6 +255,19 @@ try {
   const enRevisar = await app.locator('.vacio h3, .revision__marco').count();
   comprobar('La pantalla de revisión tiene trabajo', enRevisar > 0);
 
+  // Y lo importante: analizar no debe pisar ni el nombre ni las etiquetas.
+  await app.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
+  const botonAnalizar = app.getByRole('button', { name: /Analizar \d+ pendientes/ });
+  // Sin esto la comprobación siguiente no valdría nada: el nombre solo corre
+  // peligro cuando el clasificador aplica la plantilla.
+  comprobar('Hay fotos del envío pendientes de analizar', (await botonAnalizar.count()) === 1);
+  await botonAnalizar.click();
+  await app.waitForTimeout(7000);
+  comprobar(
+    'El análisis termina',
+    (await app.getByRole('button', { name: /Analizar \d+ pendientes/ }).count()) === 0,
+  );
+
   // Los datos del formulario tienen que verse en la ficha de la foto.
   await app.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
   await app.getByRole('button', { name: 'Todas', exact: true }).click();
@@ -255,16 +275,25 @@ try {
   await app.locator('.ficha__marco').first().click();
   await app.waitForSelector('.hoja', { timeout: 10000 });
 
+  const nombreEnApp = await app.locator('.hoja input.entrada').first().inputValue();
+  comprobar(
+    'El nombre sigue siendo el título tras analizar',
+    nombreEnApp === 'Taller de macramé en Getxo',
+    nombreEnApp,
+  );
+
+  const etiquetasEnApp = await app.getByLabel('Etiquetas').inputValue();
+  comprobar(
+    'Las etiquetas conservan los materiales tras analizar',
+    /fieltro/.test(etiquetasEnApp) && /pistola termofusible/.test(etiquetasEnApp)
+      && /lentejuelas/.test(etiquetasEnApp),
+    etiquetasEnApp,
+  );
+
   const ficha = (await app.locator('.datos').textContent()) ?? '';
   comprobar('La ficha muestra el taller', /Taller de macram/.test(ficha), ficha.slice(0, 120));
   comprobar('La ficha muestra el lugar', /Algorta/.test(ficha));
   comprobar('La ficha dice quién la envió', /Aitziber/.test(ficha));
-  comprobar(
-    'La ficha conserva los materiales del monitor',
-    /fieltro/.test(ficha) && /termofusible/.test(ficha),
-    ficha.slice(0, 200),
-  );
-
   await app.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await app.waitForTimeout(400);
 
