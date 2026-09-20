@@ -87,7 +87,9 @@ export async function enviarAlBuzon(
             fecha,
             importadaEl: ahora,
             actualizadaEn: ahora,
-            estado: 'pendiente',
+            // Igual que una importación normal: entra lista y sin tipo, y se lo
+            // pone quien la revise. Nadie adivina por ella.
+            estado: 'listo',
             entraEnCatalogo: null,
             confianza: 0,
             categoria: SIN_CLASIFICAR,

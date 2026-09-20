@@ -5,6 +5,7 @@ import { hayClaveIA, necesitaRevision } from '../lib/classifier';
 import { nombreDesdePlantilla } from '../lib/naming';
 import { useTienda } from '../state/store';
 import { AvisoLinea, ImagenFoto, Vacio } from '../components/comunes';
+import { CrearTipoRapido } from '../components/CategoriasPropias';
 import { IconoChispa, IconoComprobado, IconoSiguiente, IconoVeto } from '../components/Icons';
 
 export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
@@ -29,31 +30,13 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
     setElegida(actual && actual.categoria !== SIN_CLASIFICAR ? actual.categoria : null);
   }, [actual?.id, actual?.categoria]);
 
-  const pendientes = fotos.filter((f) => f.estado === 'pendiente');
   const conError = fotos.filter((f) => f.estado === 'error');
 
   if (!actual) {
     return (
       <>
         <h1 style={{ marginBottom: 14 }}>Revisar</h1>
-        {pendientes.length > 0 ? (
-          <Vacio
-            emoji="⏳"
-            titulo={`${pendientes.length} fotos sin analizar`}
-            accion={
-              <button
-                type="button"
-                className="boton boton--primario"
-                onClick={() => void tienda.analizar(pendientes)}
-              >
-                <IconoChispa className="boton__icono" />
-                Analizarlas ahora
-              </button>
-            }
-          >
-            Analiza las fotos para que la app decida cuáles entran en el catálogo y en qué categoría.
-          </Vacio>
-        ) : saltadas.size > 0 ? (
+        {saltadas.size > 0 ? (
           <Vacio
             emoji="👌"
             titulo="No queda nada por revisar"
@@ -63,7 +46,7 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
               </button>
             }
           >
-            Has revisado todas las dudosas de esta ronda.
+            Has puesto tipo a todas las de esta ronda.
           </Vacio>
         ) : fotos.length === 0 ? (
           <Vacio
@@ -75,13 +58,11 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
               </button>
             }
           >
-            Importa fotos y aquí aparecerán las que el clasificador no tenga claras.
+            Importa fotos y aquí irán apareciendo las que estén esperando un tipo.
           </Vacio>
         ) : (
-          <Vacio emoji="✅" titulo="Todo revisado">
-            El clasificador ha decidido con seguridad todas las fotos del catálogo. Si quieres
-            afinar más, sube el umbral de confianza en Ajustes y volverán a pasar por aquí las
-            que estén por debajo.
+          <Vacio emoji="✅" titulo="Todas tienen tipo">
+            No hay ninguna foto esperando. Cuando importes más, aparecerán aquí.
           </Vacio>
         )}
 
@@ -89,14 +70,16 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
           <div className="tarjeta" style={{ marginTop: 16 }}>
             <h2 style={{ marginBottom: 6 }}>{conError.length} fotos con error</h2>
             <p className="tarjeta__ayuda">{conError[0].error}</p>
-            <button
-              type="button"
-              className="boton"
-              onClick={() => void tienda.analizar(conError)}
-            >
-              <IconoChispa className="boton__icono" />
-              Reintentar
-            </button>
+            {hayClaveIA(ajustes) && (
+              <button
+                type="button"
+                className="boton"
+                onClick={() => void tienda.analizar(conError)}
+              >
+                <IconoChispa className="boton__icono" />
+                Reintentar
+              </button>
+            )}
           </div>
         )}
       </>
@@ -131,15 +114,15 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
         <h1>Revisar</h1>
         <span style={{ color: 'var(--texto-2)', fontSize: '0.86rem' }}>
-          {restantes} {restantes === 1 ? 'foto dudosa' : 'fotos dudosas'}
+          {restantes} {restantes === 1 ? 'foto esperando tipo' : 'fotos esperando tipo'}
         </span>
       </div>
 
-      {!hayClaveIA(ajustes) && (
+      {restantes > 3 && (
         <AvisoLinea>
-          Sin la clave de Claude aquí cae <strong>todo</strong>: la app no reconoce técnicas por su
-          cuenta. Si son muchas y del mismo taller, sale más a cuenta seleccionarlas en el Catálogo
-          y usar <strong>Rellenar ficha</strong>.
+          Si estas fotos son de un mismo taller, en el <strong>Catálogo</strong> puedes
+          seleccionarlas y usar <strong>Rellenar ficha</strong> para ponerles el título y el tipo a
+          todas de una vez, en lugar de ir una a una.
         </AvisoLinea>
       )}
 
@@ -148,15 +131,15 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
       </div>
 
       <div className="revision__sugerencia">
-        <span aria-hidden="true" style={{ fontSize: '1.15rem' }}>{sugerida?.emoji ?? '❓'}</span>
+        <span aria-hidden="true" style={{ fontSize: '1.15rem' }}>{sugerida?.emoji ?? '🏷️'}</span>
         <div>
           {sugerida ? (
             <>
-              El clasificador propone <strong>{sugerida.nombre}</strong> con un{' '}
-              {Math.round(actual.confianza * 100)} % de confianza.
+              Propuesta del modelo de visión: <strong>{sugerida.nombre}</strong>, con un{' '}
+              {Math.round(actual.confianza * 100)} % de confianza. Cámbiala si no es esa.
             </>
           ) : (
-            <>El clasificador no ha sabido identificar la técnica.</>
+            <><strong>{actual.nombre || actual.archivoOriginal}</strong> — elige su tipo abajo.</>
           )}
           {actual.motivo && <div style={{ color: 'var(--texto-2)', marginTop: 2 }}>{actual.motivo}</div>}
         </div>
@@ -203,6 +186,7 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
             {c.nombre}
           </button>
         ))}
+        <CrearTipoRapido alCrear={setElegida} />
       </div>
     </div>
   );

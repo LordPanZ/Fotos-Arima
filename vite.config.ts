@@ -7,8 +7,15 @@ import { VitePWA } from 'vite-plugin-pwa';
 // para escritorio con rutas relativas (`./`).
 const base = process.env.VITE_BASE ?? '/';
 
+/*
+ * Marca de la compilación. Se ve en Ajustes y sirve para saber, cuando algo
+ * «no aparece», si el aparato tiene la versión nueva o una copia guardada.
+ */
+const version = new Date().toISOString().slice(0, 16).replace('T', ' ');
+
 export default defineConfig({
   base,
+  define: { __VERSION__: JSON.stringify(version) },
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1500,
@@ -24,6 +31,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // La versión nueva se aplica sola y recarga. Lo que faltaba no era el
+      // modo, sino comprobar si la hay: ver `src/lib/actualizacion.ts`.
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       workbox: {

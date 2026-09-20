@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProveedorTienda, useTienda } from './state/store';
 import { necesitaRevision } from './lib/classifier';
+import { alActualizar } from './lib/actualizacion';
 import { Biblioteca } from './views/Biblioteca';
 import { Importar } from './views/Importar';
 import { Revisar } from './views/Revisar';
@@ -40,6 +41,9 @@ function Interfaz() {
   const { cargando, fotos, ajustes, sincronizando, sinSubir, sincronizar } = useTienda();
   const [seccion, setSeccion] = useState<Seccion>(seccionDelHash);
   const [instalador, setInstalador] = useState<EventoInstalacion | null>(null);
+  const [actualizando, setActualizando] = useState(false);
+
+  useEffect(() => alActualizar(setActualizando), []);
   const [ocultarPanel, setOcultarPanel] = useState(
     () => localStorage.getItem('arima.instalar.oculto') === '1',
   );
@@ -150,6 +154,16 @@ function Interfaz() {
       </nav>
 
       <main className="contenido">
+        {actualizando && (
+          <div className="panel-instalar panel-instalar--nueva">
+            <IconoRefrescar className="giro" style={{ width: 22, height: 22, flex: 'none' }} />
+            <div className="panel-instalar__texto">
+              <strong>Instalando una versión nueva…</strong> La pantalla se recargará sola en un
+              momento. No se pierde nada de lo que tengas guardado.
+            </div>
+          </div>
+        )}
+
         {instalador && !ocultarPanel && seccion === 'biblioteca' && (
           <div className="panel-instalar">
             <IconoInstalar style={{ width: 22, height: 22, flex: 'none' }} />

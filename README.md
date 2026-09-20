@@ -19,11 +19,11 @@ formulario **Tailerren Argazkiak Arima** (en euskera, instalable aparte), con el
 que los monitores mandan las fotos de sus talleres con título, fecha, lugar y
 los materiales usados — [docs/FORMULARIO-MONITORES.md](docs/FORMULARIO-MONITORES.md).
 
-**Afinar la selección.** Un modelo de visión decide si cada foto muestra una
-manualidad y con cuánta seguridad. Descarta retratos sin pieza, paisajes,
-comida, capturas de pantalla, documentos y productos comprados. Lo que no tiene
-claro no entra al catálogo: va a una cola de revisión donde lo confirmas o lo
-descartas de un toque.
+**Poner el tipo.** La app **no clasifica sola**: las fotos entran sin tipo y se
+lo pones tú, en *Revisar* de una en una o a todas de golpe con **Rellenar
+ficha**. Si quieres que además te lo proponga un modelo de visión, añade una
+clave de la API de Claude en Ajustes; aun así solo analiza cuando pulsas
+«Analizar», nunca por su cuenta.
 
 **Agrupar por categoría.** 20 categorías. Dieciocho de manualidad —ganchillo y
 punto, costura y textil, macramé y fibras, cerámica y arcilla, pintura y dibujo,

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { registerSW } from 'virtual:pwa-register';
+import { iniciarActualizaciones } from './lib/actualizacion';
 import App from './App';
 import './styles.css';
 
@@ -13,6 +13,6 @@ createRoot(raiz).render(
   </StrictMode>,
 );
 
-// Mantiene la copia instalada al día sin molestar: la siguiente vez que se
-// abra la app ya estará la versión nueva.
-registerSW({ immediate: true });
+// Comprueba si hay versión nueva al abrir y cada vez que se vuelve a la app,
+// y avisa en pantalla en vez de esperar a que alguien cierre y abra.
+iniciarActualizaciones();

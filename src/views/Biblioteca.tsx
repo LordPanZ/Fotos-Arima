@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Foto } from '../types';
 import { listaCategorias, NO_MANUALIDAD, SIN_CLASIFICAR, categoria } from '../taxonomy';
-import { estaEnCatalogo, necesitaRevision } from '../lib/classifier';
+import { estaEnCatalogo, hayClaveIA, necesitaRevision } from '../lib/classifier';
 import { exportarZip } from '../lib/exportZip';
 import { useTienda } from '../state/store';
 import { DetalleFoto } from '../components/DetalleFoto';
@@ -104,7 +104,8 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
     }
   };
 
-  const pendientes = fotos.filter((f) => f.estado === 'pendiente');
+  // Lo que el modelo de visión puede aportar algo: las que no tienen tipo.
+  const sinTipo = fotos.filter((f) => f.categoria === SIN_CLASIFICAR && f.revision === 'auto');
 
   return (
     <>
@@ -120,14 +121,24 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
             aria-label="Buscar en el catálogo"
           />
         </div>
-        {pendientes.length > 0 && !progreso.activo && (
+        {visibles.length > 0 && (
           <button
             type="button"
             className="boton boton--primario"
-            onClick={() => void tienda.analizar(pendientes)}
+            onClick={() => setFichaComun(true)}
+          >
+            <IconoEtiquetas className="boton__icono" />
+            Rellenar ficha de {elegidas.length || visibles.length}
+          </button>
+        )}
+        {sinTipo.length > 0 && !progreso.activo && hayClaveIA(tienda.ajustes) && (
+          <button
+            type="button"
+            className="boton"
+            onClick={() => void tienda.analizar(sinTipo)}
           >
             <IconoChispa className="boton__icono" />
-            Analizar {pendientes.length} pendientes
+            Analizar {sinTipo.length} sin tipo
           </button>
         )}
       </div>
@@ -307,15 +318,17 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
             Favoritas
           </button>
 
-          <button
-            type="button"
-            className="boton boton--pequeno"
-            disabled={ocupado}
-            onClick={() => void tienda.analizar(elegidas)}
-          >
-            <IconoChispa className="boton__icono" />
-            Analizar
-          </button>
+          {hayClaveIA(tienda.ajustes) && (
+            <button
+              type="button"
+              className="boton boton--pequeno"
+              disabled={ocupado}
+              onClick={() => void tienda.analizar(elegidas)}
+            >
+              <IconoChispa className="boton__icono" />
+              Analizar
+            </button>
+          )}
 
           <button
             type="button"
@@ -386,9 +399,9 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
         />
       )}
 
-      {fichaComun && elegidas.length > 0 && (
+      {fichaComun && (elegidas.length > 0 || visibles.length > 0) && (
         <FichaComun
-          fotos={elegidas}
+          fotos={elegidas.length > 0 ? elegidas : visibles}
           alCerrar={() => setFichaComun(false)}
           alAplicar={async (cambios) => {
             await tienda.actualizarFotos(cambios);

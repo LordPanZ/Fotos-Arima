@@ -4,7 +4,7 @@ import { obtenerToken, cerrarSesionGoogle, hayTokenValido } from '../lib/googleA
 import { borrarSesion, crearSesion, esperarSeleccion } from '../lib/googlePicker';
 import { importarArchivos, importarDesdeGoogle, importarEnvio, type ProgresoImportacion, type ResultadoImportacion } from '../lib/importar';
 import { EXTENSION_ENVIO } from '../lib/envio';
-import { hayClaveIA, necesitaRevision } from '../lib/classifier';
+import { necesitaRevision } from '../lib/classifier';
 import { AvisoLinea, BarraProgreso, Vacio } from '../components/comunes';
 import { FichaComun } from '../components/FichaComun';
 import {
@@ -44,11 +44,7 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
       setResumen(resultado);
       tienda.anadirFotos(resultado.nuevas);
 
-      if (resultado.nuevas.length) {
-        // El análisis sigue en segundo plano: el resumen se queda en pantalla
-        // para no dejar a la persona sin saber qué ha entrado y qué no.
-        void tienda.analizar(resultado.nuevas);
-      } else if (resultado.duplicadas) {
+      if (!resultado.nuevas.length && resultado.duplicadas) {
         tienda.avisar('Esas fotos ya estaban en el catálogo.');
       }
     },
@@ -159,7 +155,7 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
     [ajustes, tienda, mostrarResultado],
   );
 
-  // Cuántas de las recién importadas han quedado sin decidir del todo.
+  // Cuántas de las recién importadas siguen sin tipo.
   const porRevisar = resumen
     ? tienda.fotos.filter(
         (f) =>
@@ -478,16 +474,15 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
             </ul>
           )}
 
-          {!tienda.progreso.activo && resumen.nuevas.length > 0 && !hayClaveIA(ajustes) && (
+          {resumen.nuevas.length > 0 && (
             <AvisoLinea>
-              Estas fotos <strong>no se han clasificado solas</strong>: falta la clave de Claude en
-              Ajustes, y sin ella la app no sabe distinguir las técnicas. Están esperando en{' '}
-              <strong>Revisar</strong>. Puedes ponerles el tipo tú —de una en una o todas de golpe
-              con el botón de aquí abajo— o añadir la clave y volver a analizarlas.
+              Han entrado <strong>sin tipo</strong>. Si son de un mismo taller, lo más rápido es
+              ponerles el título y el tipo a todas de una vez con el botón de aquí abajo. Si son
+              mezcladas, están esperando en <strong>Revisar</strong> para ir una a una.
             </AvisoLinea>
           )}
 
-          {!tienda.progreso.activo && resumen.nuevas.length > 0 && (
+          {resumen.nuevas.length > 0 && (
             <div className="grupo-botones" style={{ marginTop: 14 }}>
               <button type="button" className="boton boton--primario" onClick={() => setFichaComun(true)}>
                 <IconoEtiquetas className="boton__icono" />
@@ -498,15 +493,9 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
               <button type="button" className="boton" onClick={() => alIr('biblioteca')}>
                 Ver el catálogo
               </button>
-              {!hayClaveIA(ajustes) && (
-                <button type="button" className="boton boton--fantasma" onClick={() => alIr('ajustes')}>
-                  <IconoAjustes className="boton__icono" />
-                  Configurar la clasificación
-                </button>
-              )}
               {porRevisar > 0 && (
                 <button type="button" className="boton" onClick={() => alIr('revisar')}>
-                  Revisar {porRevisar} {porRevisar === 1 ? 'dudosa' : 'dudosas'}
+                  Poner tipo a {porRevisar} {porRevisar === 1 ? 'foto' : 'fotos'}
                 </button>
               )}
             </div>

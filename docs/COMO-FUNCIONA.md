@@ -75,22 +75,38 @@ El prompt (en `src/lib/classifier/ai.ts`) incluye reglas de calibración
 explícitas para que el modelo **no infle la confianza**: lo dudoso debe quedar
 en la franja media, que es justo lo que manda las fotos a revisión manual.
 
-### Sin clave (modo local)
+> **La clasificación automática está desactivada.** Había además un motor local
+> sin clave que adivinaba por brillo, color y nombre de archivo. Acertaba poco,
+> y clasificar mal es peor que no clasificar: deshacerlo cuesta más trabajo que
+> hacerlo desde cero. Se quitó. Ahora nada se clasifica solo: la foto entra sin
+> tipo y espera en *Revisar*, y el análisis con el modelo de visión es un botón
+> que aparece únicamente si hay clave.
 
-Analiza la imagen en el propio dispositivo: brillo, saturación, variedad de
-color, zonas planas y densidad de bordes. Con eso descarta con bastante acierto
-capturas de pantalla, documentos e imágenes sin detalle, y aprovecha el nombre
-del archivo si menciona una técnica conocida. **No distingue tipos de
-manualidad**: todo lo demás queda en *Por revisar* con confianza baja, que es la
-respuesta honesta cuando no se puede saber.
+### Sin clave (lo normal)
 
-La app lo dice donde se nota: tras importar, el resumen avisa de que esas fotos
-no se han clasificado solas y de que están esperando en *Revisar*; y la propia
-pantalla de revisión recuerda que ahí cae todo mientras falte la clave. Para no
-ir una a una, **Rellenar ficha** (en el resumen de la importación y en la barra
-de selección del catálogo) pone tipo, título y etiquetas a todas las elegidas de
-una vez; elegir el tipo a mano cuenta como revisión y la foto entra directa al
-catálogo.
+No pasa nada: la foto entra con `categoria: sin-clasificar` y espera en
+*Revisar*. Para no ir una a una, **Rellenar ficha** —en el resumen de la
+importación y arriba del catálogo— pone título, tipo, técnica, descripción y
+etiquetas a todas las elegidas de una vez, numerando los títulos. Elegir el tipo
+a mano cuenta como revisión: la foto entra directa al catálogo.
+
+Si te falta un tipo justo cuando lo necesitas, hay un **Crear un tipo** dentro
+de las propias rejillas de categorías, tanto al revisar como al rellenar la
+ficha; se crea y queda elegido sin salir de la pantalla.
+
+## Versiones y copia guardada
+
+El service worker guarda la app entera para que funcione sin conexión, y eso
+tiene un precio: un dispositivo puede seguir con una versión vieja sin que nadie
+se entere, y desde fuera parece que los cambios «no han llegado». Pasó.
+
+El registro es `autoUpdate` (la versión nueva se aplica sola y recarga), pero de
+serie solo se comprueba al registrar, y una app instalada puede pasar días sin
+volver a cargarse. `src/lib/actualizacion.ts` añade la comprobación al volver a
+la app y al recuperar la conexión, avisa en pantalla mientras se instala, y
+Ajustes muestra la marca de la compilación (`__VERSION__`, inyectada por Vite)
+con un botón para buscarla a mano. Cuando algo «no aparece», esa marca dice en
+un vistazo si el problema es el código o la copia guardada.
 
 ## Categorías propias
 

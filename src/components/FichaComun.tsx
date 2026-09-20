@@ -3,6 +3,7 @@ import type { Foto } from '../types';
 import { listaCategorias, categoria } from '../taxonomy';
 import { nombreDeFoto } from '../lib/envio';
 import { BotonCerrar } from './comunes';
+import { CrearTipoRapido } from './CategoriasPropias';
 import { IconoComprobado, IconoLapiz } from './Icons';
 
 /**
@@ -169,6 +170,7 @@ export function FichaComun({ fotos, alCerrar, alAplicar }: PropsFichaComun) {
                   {c.nombre}
                 </button>
               ))}
+              <CrearTipoRapido alCrear={setTipo} />
             </div>
           </div>
 

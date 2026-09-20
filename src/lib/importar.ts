@@ -25,7 +25,9 @@ function fichaVacia(base: Omit<Foto, 'estado' | 'entraEnCatalogo' | 'confianza' 
     ...base,
     actualizadaEn: new Date().toISOString(),
     nombreEditado: false,
-    estado: 'pendiente',
+    // Entra lista y sin tipo: la app ya no adivina nada por su cuenta, el tipo
+    // lo pone la persona (de una en una al revisar, o en lote con la ficha).
+    estado: 'listo',
     entraEnCatalogo: null,
     confianza: 0,
     categoria: SIN_CLASIFICAR,

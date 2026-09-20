@@ -241,13 +241,19 @@ try {
   const nuevas = await pagina.locator('.estadistica__valor').first().textContent();
   comprobar('Importa el archivo local', nuevas?.trim() === '1', `valor leído: ${nuevas}`);
 
-  // El análisis heurístico deja la foto en «Por revisar» (confianza baja).
+  // La app ya no clasifica sola: la foto entra sin tipo y espera en Revisar.
   await pagina.waitForSelector('.nav__pastilla', { timeout: 20000 });
   comprobar('La manda a la cola de revisión', await pagina.locator('.nav__pastilla').isVisible());
 
   // ----------------------------------------------------------- revisar
   await pagina.getByRole('button', { name: /^Revisar/ }).first().click();
   await pagina.waitForSelector('.revision__marco img', { timeout: 15000 });
+
+  comprobar(
+    'No se inventa una clasificación: pide el tipo sin proponer nada',
+    /elige su tipo abajo/i.test((await pagina.locator('.revision__sugerencia').textContent()) ?? ''),
+    (await pagina.locator('.revision__sugerencia').textContent()) ?? '',
+  );
   comprobar('La vista de revisión muestra la foto', await pagina.locator('.revision__marco img').isVisible());
 
   for (const nueva of ['Diskofesta', 'Ihes Gela']) {
@@ -396,6 +402,14 @@ try {
     (await pagina.locator('.grupo__nombre').allTextContents()).some((t) => /Cerámica/.test(t)),
   );
 
+  // El botón de la ficha tiene que verse sin descubrir el modo selección.
+  await pagina.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
+  await pagina.waitForTimeout(400);
+  comprobar(
+    'El botón de rellenar ficha se ve sin seleccionar nada',
+    await pagina.getByRole('button', { name: /Rellenar ficha de \d+/ }).isVisible(),
+  );
+
   // ------------------------------------------------ tipos propios
   await pagina.getByRole('button', { name: 'Ajustes', exact: true }).first().click();
   await pagina.waitForTimeout(400);
@@ -424,9 +438,9 @@ try {
   const botonFicha = pagina.getByRole('button', { name: /Rellenar la ficha de las 3 de una vez/ });
   await botonFicha.waitFor({ state: 'visible', timeout: 30000 });
   comprobar(
-    'Avisa de que sin clave no se clasifican solas',
+    'Dice que han entrado sin tipo y qué hacer',
     (await pagina.locator('.aviso-linea').allTextContents()).some((t) =>
-      /no se han clasificado solas/.test(t),
+      /Han entrado .*sin tipo/.test(t),
     ),
     (await pagina.locator('.aviso-linea').allTextContents()).join(' | '),
   );
@@ -434,6 +448,17 @@ try {
   await botonFicha.click();
   await pagina.waitForSelector('.hoja__titulo', { timeout: 10000 });
   await pagina.getByLabel('Título').fill('Taller de robots');
+
+  // Crear un tipo sin salir de aquí: es donde te das cuenta de que te falta.
+  await pagina.getByRole('button', { name: /Crear un tipo/ }).click();
+  await pagina.getByLabel('Nombre del tipo nuevo').fill('Cocina');
+  await pagina.getByRole('button', { name: 'Crear y usarlo' }).click();
+  await pagina.waitForTimeout(600);
+  comprobar(
+    'El tipo creado al vuelo queda elegido',
+    (await pagina.getByRole('button', { name: /Cocina/ }).first().getAttribute('aria-pressed')) === 'true',
+  );
+
   // El tipo recién creado tiene que estar en la lista del diálogo.
   comprobar(
     'El tipo propio se puede elegir al rellenar',

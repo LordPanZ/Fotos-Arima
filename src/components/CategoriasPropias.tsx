@@ -5,6 +5,7 @@ import {
 } from '../taxonomy';
 import { IconoMas, IconoPapelera } from './Icons';
 import { AvisoLinea } from './comunes';
+import { useTienda } from '../state/store';
 
 /** Paleta acotada: los tonos que ya usa la galería, para que no desentone. */
 const COLORES = [
@@ -240,5 +241,112 @@ export function CategoriasPropias(props: PropsCategoriasPropias) {
         </AvisoLinea>
       )}
     </>
+  );
+}
+
+/**
+ * Crear un tipo sin salir de donde estás.
+ *
+ * Va dentro de las rejillas de categorías (al revisar y al rellenar la ficha),
+ * que es justo el momento en que descubres que te falta uno: obligar a ir a
+ * Ajustes ahí es perder el hilo de lo que estabas haciendo.
+ */
+export function CrearTipoRapido({ alCrear }: { alCrear(id: string): void }) {
+  const tienda = useTienda();
+  const [abierto, setAbierto] = useState(false);
+  const [nombre, setNombre] = useState('');
+  const [emoji, setEmoji] = useState('⭐');
+
+  const crear = async () => {
+    const limpio = nombre.trim();
+    if (!limpio) return;
+
+    const id = idDeCategoria(limpio);
+    const yaEsta = tienda.ajustes.categoriasPropias.find((c) => c.id === id);
+    if (yaEsta) {
+      alCrear(yaEsta.id);
+      setAbierto(false);
+      setNombre('');
+      return;
+    }
+
+    const nueva: CategoriaPropia = {
+      id,
+      nombre: limpio,
+      emoji: emoji.trim() || '⭐',
+      // El color sale de la propia lista, para que dos tipos seguidos no salgan
+      // iguales sin tener que preguntar por algo que da igual ahora mismo.
+      color: COLORES[tienda.ajustes.categoriasPropias.length % COLORES.length],
+      definicion: limpio,
+      familia: 'manualidad',
+    };
+
+    await tienda.guardarAjustes({
+      ...tienda.ajustes,
+      categoriasPropias: [...tienda.ajustes.categoriasPropias, nueva],
+    });
+    alCrear(id);
+    setAbierto(false);
+    setNombre('');
+    tienda.avisar(`Tipo «${limpio}» creado. Puedes afinarlo en Ajustes.`, 'exito');
+  };
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        className="opcion-categoria opcion-categoria--nueva"
+        onClick={() => setAbierto(true)}
+      >
+        <IconoMas style={{ width: 15, height: 15 }} />
+        Crear un tipo
+      </button>
+    );
+  }
+
+  return (
+    <div className="tipo-rapido">
+      <div className="fila-emojis">
+        {EMOJIS.slice(0, 6).map((e) => (
+          <button
+            key={e}
+            type="button"
+            className="emoji-opcion"
+            aria-pressed={emoji === e}
+            aria-label={`Icono ${e}`}
+            onClick={() => setEmoji(e)}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+      <input
+        className="entrada"
+        value={nombre}
+        onChange={(e) => setNombre(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && void crear()}
+        placeholder="Nombre del tipo nuevo"
+        aria-label="Nombre del tipo nuevo"
+        maxLength={40}
+        autoFocus
+      />
+      <div className="grupo-botones">
+        <button
+          type="button"
+          className="boton boton--primario boton--pequeno"
+          disabled={!nombre.trim()}
+          onClick={() => void crear()}
+        >
+          Crear y usarlo
+        </button>
+        <button
+          type="button"
+          className="boton boton--fantasma boton--pequeno"
+          onClick={() => { setAbierto(false); setNombre(''); }}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
   );
 }

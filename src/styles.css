@@ -585,6 +585,19 @@ a { color: var(--acento); }
 .emoji-opcion[aria-pressed='true'] { border-color: var(--acento); background: var(--acento-suave); }
 .color-opcion[aria-pressed='true'] { outline: 2px solid var(--texto); outline-offset: 2px; }
 
+.opcion-categoria--nueva { border-style: dashed; color: var(--texto-2); font-weight: 600; }
+.opcion-categoria--nueva:hover { color: var(--acento-fuerte); }
+
+/* Ocupa la rejilla entera: si no, el campo de texto sale del ancho de una
+   celda y no se puede escribir en el móvil. */
+.tipo-rapido {
+  grid-column: 1 / -1;
+  display: grid; gap: 8px;
+  padding: 11px;
+  border: 1px dashed var(--acento); border-radius: var(--radio-s);
+  background: var(--acento-suave);
+}
+
 /* ----------------------------------------------------------------- avisos */
 
 .avisos {
@@ -621,6 +634,8 @@ a { color: var(--acento); }
   background: var(--acento-suave);
 }
 .panel-instalar__texto { flex: 1; font-size: 0.86rem; }
+
+.panel-instalar--nueva { border-color: var(--acento); background: var(--acento-suave); }
 
 .aviso-linea {
   display: flex; align-items: flex-start; gap: 9px;

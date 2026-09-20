@@ -5,10 +5,12 @@ import { exportarFichas, exportarZip } from '../lib/exportZip';
 import { TOKENS, nombreDesdePlantilla } from '../lib/naming';
 import { estaEnCatalogo, hayClaveIA, mensajeDeError, probarClave } from '../lib/classifier';
 import { useTienda } from '../state/store';
+import { VERSION, buscarActualizacion, recargarSinCache } from '../lib/actualizacion';
 import { AvisoLinea, formatearBytes } from '../components/comunes';
 import { CategoriasPropias } from '../components/CategoriasPropias';
 import {
   IconoChispa, IconoComprobado, IconoDescargar, IconoEtiquetas, IconoGoogle, IconoPapelera,
+  IconoRefrescar,
 } from '../components/Icons';
 
 const MODELOS = [
@@ -28,6 +30,7 @@ export function Ajustes() {
   const [borrador, setBorrador] = useState<TipoAjustes>(tienda.ajustes);
   const [uso, setUso] = useState<UsoAlmacenamiento | null>(null);
   const [probando, setProbando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
 
   useEffect(() => setBorrador(tienda.ajustes), [tienda.ajustes]);
   useEffect(() => {
@@ -112,10 +115,11 @@ export function Ajustes() {
           <h2>Clasificación</h2>
         </div>
         <p className="tarjeta__ayuda">
-          Con una clave de la API de Claude cada foto se analiza con un modelo de visión: es lo que
-          permite distinguir ganchillo de macramé, reconocer una Diskofesta o una Ihes Gela, y descartar
-          lo que no es ninguna de las dos cosas. Sin
-          clave, la app solo hace un filtrado local básico y manda casi todo a revisión.
+          <strong>La app no clasifica nada por su cuenta.</strong> Las fotos entran sin tipo y se lo
+          pones tú, de una en una en Revisar o a todas de golpe con «Rellenar ficha». Si quieres que
+          además lo proponga un modelo de visión —distinguir ganchillo de macramé, reconocer una
+          Diskofesta— hace falta una clave de la API de Claude, y aun así solo analiza cuando se lo
+          pides con el botón, nunca solo.
         </p>
 
         <label className="interruptor">
@@ -125,9 +129,10 @@ export function Ajustes() {
             onChange={(e) => cambiar('usarIA', e.target.checked)}
           />
           <span className="interruptor__texto">
-            Analizar con el modelo de visión
+            Ofrecer el análisis con el modelo de visión
             <span className="interruptor__ayuda">
-              Desactívalo para trabajar sin conexión o sin gastar en la API.
+              Añade el botón «Analizar» donde haga falta. Aunque esté activado, no se analiza nada
+              hasta que lo pulsas.
             </span>
           </span>
         </label>
@@ -381,6 +386,39 @@ export function Ajustes() {
             Vaciar el catálogo local
           </button>
         </div>
+      </div>
+
+      {/* ------------------------------------------------------- versión */}
+      <div className="tarjeta">
+        <div className="tarjeta__titulo">
+          <IconoRefrescar style={{ width: 19, height: 19 }} />
+          <h2>Versión</h2>
+        </div>
+        <p className="tarjeta__ayuda">
+          Esta copia es de <code>{VERSION}</code>. Si algo que te han dicho que está hecho no
+          aparece, lo más probable es que el dispositivo siga con una copia guardada: búscala aquí.
+        </p>
+        <button
+          type="button"
+          className="boton"
+          disabled={buscando}
+          onClick={async () => {
+            setBuscando(true);
+            try {
+              // Si hay versión nueva, el service worker la aplica y recarga
+              // por su cuenta; esta recarga es el plan B cuando no la hay o
+              // cuando el navegador se ha quedado con algo a medias.
+              await buscarActualizacion();
+              tienda.avisar('Comprobado. Recargando…');
+              setTimeout(recargarSinCache, 900);
+            } finally {
+              setBuscando(false);
+            }
+          }}
+        >
+          <IconoRefrescar className={`boton__icono${buscando ? ' giro' : ''}`} />
+          {buscando ? 'Buscando…' : 'Buscar actualización'}
+        </button>
       </div>
     </>
   );

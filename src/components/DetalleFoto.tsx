@@ -3,6 +3,7 @@ import type { Foto } from '../types';
 import { listaCategorias, categoria, NO_MANUALIDAD, SIN_CLASIFICAR } from '../taxonomy';
 import { useTienda } from '../state/store';
 import { nombreDesdePlantilla } from '../lib/naming';
+import { hayClaveIA } from '../lib/classifier';
 import { descargarFoto } from '../lib/share';
 import { BotonCerrar, ImagenFoto, formatearBytes, formatearFecha } from './comunes';
 import {
@@ -365,15 +366,17 @@ export function DetalleFoto({ foto, contexto, alCerrar, alCambiarFoto }: Props) 
                 <IconoDescargar className="boton__icono" />
                 Descargar
               </button>
-              <button
-                type="button"
-                className="boton"
-                disabled={ocupado}
-                onClick={() => void analizar([foto])}
-              >
-                <IconoChispa className="boton__icono" />
-                Volver a analizar
-              </button>
+              {hayClaveIA(ajustes) && (
+                <button
+                  type="button"
+                  className="boton"
+                  disabled={ocupado}
+                  onClick={() => void analizar([foto])}
+                >
+                  <IconoChispa className="boton__icono" />
+                  Volver a analizar
+                </button>
+              )}
               <button
                 type="button"
                 className="boton boton--peligro"

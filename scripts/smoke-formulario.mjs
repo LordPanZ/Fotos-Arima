@@ -307,17 +307,13 @@ try {
   const enRevisar = await app.locator('.vacio h3, .revision__marco').count();
   comprobar('La pantalla de revisión tiene trabajo', enRevisar > 0);
 
-  // Y lo importante: analizar no debe pisar ni el nombre ni las etiquetas.
+  // La app no clasifica sola, así que tampoco puede pisar lo que puso el
+  // monitor: sin clave de Claude no hay ningún botón de analizar a la vista.
   await app.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
-  const botonAnalizar = app.getByRole('button', { name: /Analizar \d+ pendientes/ });
-  // Sin esto la comprobación siguiente no valdría nada: el nombre solo corre
-  // peligro cuando el clasificador aplica la plantilla.
-  comprobar('Hay fotos del envío pendientes de analizar', (await botonAnalizar.count()) === 1);
-  await botonAnalizar.click();
-  await app.waitForTimeout(7000);
+  await app.waitForTimeout(500);
   comprobar(
-    'El análisis termina',
-    (await app.getByRole('button', { name: /Analizar \d+ pendientes/ }).count()) === 0,
+    'Sin clave no se ofrece analizar nada',
+    (await app.getByRole('button', { name: /Analizar/ }).count()) === 0,
   );
 
   // Los datos del formulario tienen que verse en la ficha de la foto.
@@ -329,14 +325,14 @@ try {
 
   const nombreEnApp = await app.locator('.hoja input.entrada').first().inputValue();
   comprobar(
-    'El nombre sigue siendo el título tras analizar',
+    'El nombre de la foto es el título del taller',
     /^Taller de macramé en Getxo \d{2}$/.test(nombreEnApp),
     nombreEnApp,
   );
 
   const etiquetasEnApp = await app.getByLabel('Etiquetas').inputValue();
   comprobar(
-    'Las etiquetas conservan los materiales tras analizar',
+    'Las etiquetas son los materiales que marcó el monitor',
     /fieltro/.test(etiquetasEnApp) && /pistola termofusible/.test(etiquetasEnApp)
       && /lentejuelas/.test(etiquetasEnApp),
     etiquetasEnApp,

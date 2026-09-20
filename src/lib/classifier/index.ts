@@ -4,7 +4,6 @@ import { NO_MANUALIDAD, SIN_CLASIFICAR } from '../../taxonomy';
 import { obtenerCompleta } from '../sync';
 import { nombreDesdePlantilla } from '../naming';
 import { clasificarConIA, hayClaveIA, mensajeDeError } from './ai';
-import { clasificarEnLocal } from './heuristic';
 
 export { hayClaveIA, mensajeDeError, probarClave } from './ai';
 
@@ -48,7 +47,7 @@ export function aplicarResultado(
  */
 export function necesitaRevision(foto: Foto, umbral: number): boolean {
   if (foto.revision !== 'auto') return false;
-  if (foto.estado !== 'listo') return false;
+  if (foto.estado === 'error') return false;
   // Lo que mandan los monitores pasa siempre por revisión, por seguro que
   // esté el clasificador: es material de otra persona y alguien lo mira antes
   // de que entre al catálogo.
@@ -101,8 +100,20 @@ export interface ResumenAnalisis {
  */
 export async function analizarLote(opciones: OpcionesAnalisis): Promise<ResumenAnalisis> {
   const { fotos, ajustes, senal } = opciones;
-  const conIA = hayClaveIA(ajustes);
   const total = fotos.length;
+
+  // El analisis es siempre con el modelo de vision y siempre a peticion: no
+  // hay motor local. El que habia acertaba poco y clasificar mal es peor que
+  // no clasificar, porque hay que deshacerlo a mano foto a foto.
+  if (!hayClaveIA(ajustes)) {
+    return {
+      hechas: 0,
+      errores: 0,
+      cancelado: false,
+      abortadoPor:
+        'Para analizar con el modelo de vision hace falta una clave de Claude en Ajustes.',
+    };
+  }
 
   let hechas = 0;
   let errores = 0;
@@ -127,10 +138,7 @@ export async function analizarLote(opciones: OpcionesAnalisis): Promise<ResumenA
         const imagen = await obtenerCompleta(foto.id);
         if (!imagen) throw new Error('La imagen ya no está guardada en este dispositivo.');
 
-        const resultado = conIA
-          ? await clasificarConIA(imagen, ajustes, senal)
-          : await clasificarEnLocal(imagen, foto.archivoOriginal);
-
+        const resultado = await clasificarConIA(imagen, ajustes, senal);
         await opciones.alTerminarFoto(aplicarResultado(foto, resultado, ajustes.plantillaNombre));
       } catch (error) {
         if (senal.aborted) return;
@@ -151,7 +159,7 @@ export async function analizarLote(opciones: OpcionesAnalisis): Promise<ResumenA
     }
   };
 
-  const hilos = Math.max(1, Math.min(ajustes.concurrencia, conIA ? 8 : 2));
+  const hilos = Math.max(1, Math.min(ajustes.concurrencia, 8));
   await Promise.all(Array.from({ length: Math.min(hilos, total || 1) }, trabajador));
 
   opciones.alProgresar({ activo: false, hechas, total, errores });

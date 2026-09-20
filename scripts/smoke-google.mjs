@@ -283,7 +283,7 @@ try {
   await pagina.waitForSelector('.revision__marco img', { timeout: 20000 });
   comprobar(
     'Solo ha entrado la foto elegida',
-    /^1 foto dudosa/.test((await pagina.locator('.revision h1 + span').first().textContent()) ?? ''),
+    /^1 foto esperando tipo/.test((await pagina.locator('.revision h1 + span').first().textContent()) ?? ''),
     (await pagina.locator('.revision h1 + span').first().textContent()) ?? '(sin texto)',
   );
   comprobar(
