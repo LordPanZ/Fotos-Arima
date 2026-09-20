@@ -16,6 +16,23 @@ Se hace **una sola vez** y tarda unos diez minutos. Al terminar tendrás un
 
 ---
 
+## Si lo haces desde un iPhone o iPad
+
+Se puede, pero la consola de Google Cloud está pensada para pantalla grande y
+en el móvil se queda estrecha. Dos cosas que ayudan mucho:
+
+1. Usa **Safari** y activa el modo de escritorio: toca **ᴀA** en la barra de
+   direcciones › **Solicitar sitio web para ordenador**. Sin eso, media consola
+   queda fuera de la pantalla.
+2. Comprueba con qué cuenta estás. Arriba a la derecha, el círculo con la
+   inicial: tiene que ser **arimacooltour@gmail.com**. Si tienes varias cuentas
+   de Google en el móvil, es el fallo más habitual.
+
+Si tienes un ordenador a mano, hazlo ahí: son los mismos pasos y se tarda la
+mitad.
+
+---
+
 ## 1. Crear un proyecto en Google Cloud
 
 1. Entra en <https://console.cloud.google.com/> con la cuenta
@@ -121,6 +138,21 @@ VITE_GOOGLE_CLIENT_ID=123456789012-a1b2c3d4e5f6g7h8.apps.googleusercontent.com
 | «La sesión de Google ha caducado» | Normal: el token dura una hora. Vuelve a pulsar el botón de importar. |
 | La ventana del selector no se abre | El navegador la ha bloqueado como emergente. Permite las ventanas emergentes para este sitio. |
 | «El navegador ha bloqueado la descarga de la foto» | Alguna extensión o una política del navegador está cortando la petición. La aplicación de escritorio no tiene esta limitación. |
+
+## Usarlo después desde el iPhone
+
+Una vez configurado, al pulsar «Elegir fotos en Google Fotos»:
+
+1. Se abre una ventana de Google. Si Safari la bloquea, sale un aviso arriba:
+   tócalo y permite la ventana emergente para este sitio.
+2. Elige las fotos y pulsa **Hecho** (arriba a la derecha).
+3. **Vuelve a Fotos Arima.** Si la tienes instalada en la pantalla de inicio, la
+   ventana de Google se abre en Safari aparte, así que hay que volver a la app a
+   mano. Ella sola detecta que ya has elegido y empieza a descargar; no hay que
+   pulsar nada más.
+
+> Si te dejas la ventana de Google abierta y vuelves a la app, funciona igual.
+> Lo que no puedes es cerrar Fotos Arima mientras descarga.
 
 ## Qué ve la app y qué no
 
