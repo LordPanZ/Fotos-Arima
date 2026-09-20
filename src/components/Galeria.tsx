@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Foto } from '../types';
-import { CATEGORIAS, categoria } from '../taxonomy';
+import { listaCategorias, categoria } from '../taxonomy';
 import { necesitaRevision } from '../lib/classifier';
 import { ImagenFoto, formatearFecha } from './comunes';
 import { IconoComprobado, IconoEstrella } from './Icons';
@@ -89,8 +89,14 @@ interface PropsRejilla {
   alSeleccionarGrupo?(ids: string[]): void;
 }
 
-/** Orden estable: el de la taxonomía, y dentro de cada grupo por fecha descendente. */
-const ORDEN = new Map(CATEGORIAS.map((c, i) => [c.id, i]));
+/**
+ * Orden estable: el de la taxonomía, y dentro de cada grupo por fecha
+ * descendente. Se calcula al agrupar, no al cargar el módulo, porque las
+ * categorías propias se registran después de leer los ajustes.
+ */
+function orden(): Map<string, number> {
+  return new Map(listaCategorias().map((c, i) => [c.id, i]));
+}
 
 export function Rejilla(props: PropsRejilla) {
   const { fotos, agrupar } = props;
@@ -103,8 +109,9 @@ export function Rejilla(props: PropsRejilla) {
       if (lista) lista.push(foto);
       else porCategoria.set(foto.categoria, [foto]);
     }
+    const posicion = orden();
     return [...porCategoria.entries()].sort(
-      (a, b) => (ORDEN.get(a[0]) ?? 999) - (ORDEN.get(b[0]) ?? 999),
+      (a, b) => (posicion.get(a[0]) ?? 999) - (posicion.get(b[0]) ?? 999),
     );
   }, [fotos, agrupar]);
 

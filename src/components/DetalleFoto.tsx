@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Foto } from '../types';
-import { CATEGORIAS, categoria, NO_MANUALIDAD, SIN_CLASIFICAR } from '../taxonomy';
+import { listaCategorias, categoria, NO_MANUALIDAD, SIN_CLASIFICAR } from '../taxonomy';
 import { useTienda } from '../state/store';
 import { nombreDesdePlantilla } from '../lib/naming';
 import { descargarFoto } from '../lib/share';
@@ -215,7 +215,7 @@ export function DetalleFoto({ foto, contexto, alCerrar, alCambiarFoto }: Props) 
                 }}
               >
                 {foto.categoria === SIN_CLASIFICAR && <option value={SIN_CLASIFICAR}>⏳ Sin clasificar</option>}
-                {CATEGORIAS.map((c) => (
+                {listaCategorias().map((c) => (
                   <option key={c.id} value={c.id}>{c.emoji} {c.nombre}</option>
                 ))}
                 <option value={NO_MANUALIDAD}>🚫 No entra en el catálogo</option>

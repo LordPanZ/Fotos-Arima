@@ -72,6 +72,19 @@ export const IconoDescargar = (p: Props) => (
   </Icono>
 );
 
+export const IconoEtiquetas = (p: Props) => (
+  <Icono {...p}>
+    <path d="M3.5 11.2V5.3a1.8 1.8 0 0 1 1.8-1.8h5.9a1.8 1.8 0 0 1 1.3.5l7 7a1.8 1.8 0 0 1 0 2.6l-5.9 5.9a1.8 1.8 0 0 1-2.6 0l-7-7a1.8 1.8 0 0 1-.5-1.3Z" />
+    <path d="M7.8 7.8h.01" />
+  </Icono>
+);
+
+export const IconoMas = (p: Props) => (
+  <Icono {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </Icono>
+);
+
 export const IconoPapelera = (p: Props) => (
   <Icono {...p}>
     <path d="M4.5 6.5h15" />

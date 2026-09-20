@@ -33,9 +33,22 @@ Navidad, infantil, flores y naturaleza, y otras— más las dos actividades de
 Arima: **Diskofesta** e **Ihes Gela**. Cada foto guarda además su técnica o
 escena, sus materiales y sus colores.
 
+**Tipos propios.** Desde Ajustes puedes crear los tuyos —Tecnología, Cocina,
+Deporte…— con su icono, su color y una frase que explica cuándo usarlos. Salen
+en la galería y al revisar, y el clasificador también los tiene en cuenta. Como
+viajan pegados a la ficha de cada foto, quien abra el catálogo compartido desde
+otro dispositivo los ve igual, sin tener que crearlos.
+
 **Nombrar y renombrar.** Nombres automáticos con plantilla configurable
 (`Macramé y fibras - colgante de pared beige - 2024-05-12`), editables uno a uno
 o en lote. Lo que escribes a mano no se sobrescribe.
+
+**Rellenar varias de una vez.** Cuando llegan las fotos de un mismo taller,
+**Rellenar ficha** pone el título, el tipo, la técnica, la descripción y las
+etiquetas a todas de golpe, numerando los títulos (`Taller de robots 01`, `02`…).
+Solo se aplica lo que escribes, así que sirve igual si las fotos son de tipos
+distintos y solo quieres tocarles el título. Está en el resumen de la
+importación y en la barra de selección del catálogo.
 
 **Compartir.** Menú nativo del sistema con las fotos adjuntas, una o varias a la
 vez. Al compartir eliges si va **la foto con su ficha** (nombre, categoría y
@@ -100,6 +113,8 @@ npm run desktop:build   # instaladores .exe / .dmg / AppImage
 | `npm run preview` | Sirve la compilación en `localhost:4173` |
 | `npm run typecheck` | Solo TypeScript |
 | `npm run smoke` | Recorrido completo en un navegador real |
+| `npm run smoke:google` | Camino de Google Fotos, con Google sustituido por dobles |
+| `npm run smoke:formulario` | Formulario de monitores de punta a punta |
 | `npm run icons` | Regenera los iconos desde el SVG |
 | `npm run desktop:dev` | Abre la versión de escritorio |
 | `npm run desktop:build` | Genera los instaladores |

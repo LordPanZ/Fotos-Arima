@@ -552,6 +552,39 @@ a { color: var(--acento); }
 .opcion-categoria:hover { border-color: var(--acento); background: var(--acento-suave); }
 .opcion-categoria[aria-pressed='true'] { border-color: var(--acento); background: var(--acento-suave); color: var(--acento-fuerte); }
 
+/* ------------------------------------------------------- tipos propios */
+
+.lista-tipos { list-style: none; display: grid; gap: 7px; margin: 0 0 12px; padding: 0; }
+.tipo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--borde); border-left: 3px solid var(--tono, var(--acento));
+  border-radius: var(--radio-s); background: var(--superficie);
+}
+.tipo__emoji { font-size: 1.2rem; line-height: 1; }
+.tipo__cuerpo { display: grid; gap: 1px; min-width: 0; flex: 1; }
+.tipo__cuerpo strong { font-size: 0.88rem; }
+.tipo__ayuda { font-size: 0.76rem; color: var(--texto-2); }
+
+.tipo-nuevo {
+  padding: 12px; margin-bottom: 12px;
+  border: 1px dashed var(--borde); border-radius: var(--radio-s);
+  background: var(--fondo-2, transparent);
+}
+.tipo-nuevo .campo:last-of-type { margin-bottom: 12px; }
+
+.fila-emojis { display: flex; flex-wrap: wrap; gap: 6px; }
+.emoji-opcion, .color-opcion {
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border: 1px solid var(--borde); border-radius: var(--radio-s);
+  background: var(--superficie); font-size: 1.1rem;
+  cursor: pointer; transition: all var(--transicion);
+}
+.emoji-opcion:hover, .color-opcion:hover { border-color: var(--acento); }
+.emoji-opcion[aria-pressed='true'] { border-color: var(--acento); background: var(--acento-suave); }
+.color-opcion[aria-pressed='true'] { outline: 2px solid var(--texto); outline-offset: 2px; }
+
 /* ----------------------------------------------------------------- avisos */
 
 .avisos {

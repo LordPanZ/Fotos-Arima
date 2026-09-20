@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Foto } from '../types';
-import { CATEGORIAS, NO_MANUALIDAD, SIN_CLASIFICAR, categoria } from '../taxonomy';
-import { necesitaRevision } from '../lib/classifier';
+import { listaCategorias, NO_MANUALIDAD, SIN_CLASIFICAR, categoria } from '../taxonomy';
+import { hayClaveIA, necesitaRevision } from '../lib/classifier';
 import { nombreDesdePlantilla } from '../lib/naming';
 import { useTienda } from '../state/store';
-import { ImagenFoto, Vacio } from '../components/comunes';
+import { AvisoLinea, ImagenFoto, Vacio } from '../components/comunes';
 import { IconoChispa, IconoComprobado, IconoSiguiente, IconoVeto } from '../components/Icons';
 
 export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
@@ -135,6 +135,14 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
         </span>
       </div>
 
+      {!hayClaveIA(ajustes) && (
+        <AvisoLinea>
+          Sin la clave de Claude aquí cae <strong>todo</strong>: la app no reconoce técnicas por su
+          cuenta. Si son muchas y del mismo taller, sale más a cuenta seleccionarlas en el Catálogo
+          y usar <strong>Rellenar ficha</strong>.
+        </AvisoLinea>
+      )}
+
       <div className="revision__marco">
         <ImagenFoto key={actual.id} id={actual.id} alt={actual.nombre} tamano="completa" />
       </div>
@@ -183,7 +191,7 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
 
       <h3 style={{ marginBottom: 8 }}>Categoría</h3>
       <div className="rejilla-categorias">
-        {CATEGORIAS.map((c) => (
+        {listaCategorias().map((c) => (
           <button
             key={c.id}
             type="button"

@@ -10,10 +10,56 @@ import {
 } from 'react';
 import type { Ajustes, Foto, ProgresoAnalisis } from '../types';
 import { AJUSTES_POR_DEFECTO } from '../types';
+import {
+  categoria, esCategoriaPropia, registrarCategoriasPropias, type CategoriaPropia,
+} from '../taxonomy';
 import * as db from '../lib/db';
 import { analizarLote } from '../lib/classifier';
 import { renombrarLote } from '../lib/naming';
 import { sincronizar as sincronizarNube, type ResumenSync } from '../lib/sync';
+
+/**
+ * Una foto en una categoria propia se lleva la definicion pegada a la ficha.
+ * El catalogo se sincroniza pero los ajustes no, asi que sin esto el otro
+ * dispositivo del equipo recibiria un identificador que no sabe pintar.
+ */
+function sellarCategoria(foto: Foto): Foto {
+  if (!esCategoriaPropia(foto.categoria)) {
+    return foto.categoriaPropia ? { ...foto, categoriaPropia: undefined } : foto;
+  }
+  const cat = categoria(foto.categoria);
+  // Si la categoria no esta registrada, `categoria()` devuelve «sin clasificar»:
+  // mejor conservar lo que ya traia la ficha que sobrescribirlo con eso.
+  if (cat.id !== foto.categoria) return foto;
+  return {
+    ...foto,
+    categoriaPropia: {
+      id: cat.id,
+      nombre: cat.nombre,
+      emoji: cat.emoji,
+      color: cat.color,
+      definicion: cat.definicion,
+      familia: cat.familia,
+    },
+  };
+}
+
+/** Da de alta las categorias propias que llegan en fotos del catalogo compartido. */
+function adoptarCategorias(ajustes: Ajustes, fotos: Foto[]): Ajustes {
+  const conocidas = new Set(ajustes.categoriasPropias.map((c) => c.id));
+  const nuevas: CategoriaPropia[] = [];
+
+  for (const foto of fotos) {
+    const propia = foto.categoriaPropia;
+    if (!propia?.id || propia.id !== foto.categoria || conocidas.has(propia.id)) continue;
+    conocidas.add(propia.id);
+    nuevas.push(propia);
+  }
+
+  return nuevas.length
+    ? { ...ajustes, categoriasPropias: [...ajustes.categoriasPropias, ...nuevas] }
+    : ajustes;
+}
 
 export interface Aviso {
   id: number;
@@ -97,8 +143,13 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
 
   const recargar = useCallback(async () => {
     const [guardadas, guardados] = await Promise.all([db.listarFotos(), db.leerAjustes()]);
+    const conPropias = adoptarCategorias(guardados, guardadas);
+    if (conPropias !== guardados) await db.escribirAjustes(conPropias);
+    // Antes de pintar: la galeria y la revision resuelven las categorias por el
+    // registro del modulo, no por los ajustes.
+    registrarCategoriasPropias(conPropias.categoriasPropias);
     setFotos(guardadas);
-    setAjustes(guardados);
+    setAjustes(conPropias);
     setSinSubir((await db.listarPendientes()).length);
     setCargando(false);
   }, []);
@@ -141,7 +192,8 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
   /** Toda escritura local sella la marca de tiempo y entra en la cola de subida. */
   const registrar = useCallback(
     async (cambios: Foto[]) => {
-      const sellados = cambios.map((f) => ({ ...f, actualizadaEn: new Date().toISOString() }));
+      const ahora = new Date().toISOString();
+      const sellados = cambios.map((f) => ({ ...sellarCategoria(f), actualizadaEn: ahora }));
       fusionar(sellados);
       await db.guardarFotos(sellados);
       await db.marcarPendientes(sellados.map((f) => f.id), 'guardar');
@@ -180,6 +232,7 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
   }, [contarPendientes]);
 
   const guardarAjustes = useCallback(async (nuevos: Ajustes) => {
+    registrarCategoriasPropias(nuevos.categoriasPropias);
     setAjustes(nuevos);
     await db.escribirAjustes(nuevos);
   }, []);

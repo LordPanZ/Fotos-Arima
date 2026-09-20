@@ -30,7 +30,21 @@ export interface Categoria {
 export const SIN_CLASIFICAR = 'sin-clasificar';
 export const NO_MANUALIDAD = 'no-manualidad';
 
-export const CATEGORIAS: Categoria[] = [
+/**
+ * Categoría creada a mano desde Ajustes. Lleva los mismos campos que una de
+ * serie porque va a los mismos sitios: galería, revisión, nombres y prompt.
+ */
+export interface CategoriaPropia {
+  id: string;
+  nombre: string;
+  emoji: string;
+  color: string;
+  /** Lo que el clasificador lee para decidir si una foto va aquí. */
+  definicion: string;
+  familia: Familia;
+}
+
+export const CATEGORIAS_BASE: Categoria[] = [
   {
     id: 'ganchillo-punto',
     nombre: 'Ganchillo y punto',
@@ -258,23 +272,87 @@ export const CATEGORIAS_ESPECIALES: Record<string, Categoria> = {
   },
 };
 
-const PORID = new Map<string, Categoria>([
-  ...CATEGORIAS.map((c) => [c.id, c] as const),
-  ...Object.values(CATEGORIAS_ESPECIALES).map((c) => [c.id, c] as const),
-]);
+/*
+ * Las categorías propias viven en Ajustes, pero se consultan desde toda la app
+ * (galería, revisión, nombres, búsqueda, prompt) y desde funciones sueltas que
+ * no tienen acceso al estado. Por eso hay un registro aquí, que la tienda
+ * mantiene al día con `registrarCategoriasPropias` cada vez que cambian los
+ * ajustes. Es la única variable mutable del módulo y solo la escribe la tienda.
+ */
+let propias: Categoria[] = [];
+let todas: Categoria[] = CATEGORIAS_BASE;
+let porId = construirIndice();
 
-export function categoria(id: string | null | undefined): Categoria {
-  return (id && PORID.get(id)) || CATEGORIAS_ESPECIALES[SIN_CLASIFICAR];
+function construirIndice(): Map<string, Categoria> {
+  return new Map<string, Categoria>([
+    ...todas.map((c) => [c.id, c] as const),
+    ...Object.values(CATEGORIAS_ESPECIALES).map((c) => [c.id, c] as const),
+  ]);
 }
 
-export const IDS_CATEGORIAS = CATEGORIAS.map((c) => c.id);
+/** Convierte un nombre escrito a mano en un identificador estable. */
+export function idDeCategoria(nombre: string): string {
+  const limpio = nombre
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  // Prefijo para que nunca choque con una categoría de serie, ni hoy ni cuando
+  // se añadan más: una colisión reetiquetaría fotos ajenas al sincronizar.
+  return limpio ? `propia-${limpio}` : `propia-${Date.now().toString(36)}`;
+}
 
-export const CATEGORIAS_MANUALIDAD = CATEGORIAS.filter((c) => c.familia === 'manualidad');
-export const CATEGORIAS_ACTIVIDAD = CATEGORIAS.filter((c) => c.familia === 'actividad');
+export function esCategoriaPropia(id: string): boolean {
+  return id.startsWith('propia-');
+}
+
+export function registrarCategoriasPropias(lista: CategoriaPropia[]): void {
+  // Una categoría propia nunca puede tapar a una de serie ni a las especiales.
+  const reservados = new Set([...CATEGORIAS_BASE.map((c) => c.id), ...Object.keys(CATEGORIAS_ESPECIALES)]);
+  const vistos = new Set<string>();
+
+  propias = [];
+  for (const c of lista) {
+    if (!c.id || reservados.has(c.id) || vistos.has(c.id)) continue;
+    vistos.add(c.id);
+    propias.push({
+      id: c.id,
+      nombre: c.nombre,
+      definicion: c.definicion,
+      emoji: c.emoji,
+      color: c.color,
+      sinonimos: [c.nombre.toLowerCase()],
+      familia: c.familia,
+    });
+  }
+
+  todas = [...CATEGORIAS_BASE, ...propias];
+  porId = construirIndice();
+}
+
+/** Todas las categorías elegibles: las de serie y las creadas a mano. */
+export function listaCategorias(): Categoria[] {
+  return todas;
+}
+
+export function categoria(id: string | null | undefined): Categoria {
+  return (id && porId.get(id)) || CATEGORIAS_ESPECIALES[SIN_CLASIFICAR];
+}
+
+/** `true` si el identificador no corresponde a ninguna categoría conocida. */
+export function categoriaDesconocida(id: string | null | undefined): boolean {
+  return Boolean(id) && !porId.has(id as string);
+}
+
+export function idsCategorias(): string[] {
+  return todas.map((c) => c.id);
+}
 
 /** Listado compacto que se le pasa al modelo dentro del prompt. */
 export function taxonomiaParaPrompt(familia?: Familia): string {
-  const lista = familia ? CATEGORIAS.filter((c) => c.familia === familia) : CATEGORIAS;
+  const lista = familia ? todas.filter((c) => c.familia === familia) : todas;
   return lista.map((c) => `- ${c.id}: ${c.nombre}. ${c.definicion}`).join('\n');
 }
 

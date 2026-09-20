@@ -131,6 +131,15 @@ const carpeta = await mkdtemp(join(tmpdir(), 'arima-smoke-'));
 const rutaImagen = join(carpeta, 'macrame colgante beige.png');
 await imagenDePrueba(rutaImagen);
 
+// Un taller entero: sirve para la ficha común, que es lo que se usa cuando
+// llegan varias fotos del mismo sitio.
+const rutasTaller = [];
+for (const n of [1, 2, 3]) {
+  const ruta = join(carpeta, `taller robots ${n}.png`);
+  await imagenDePrueba(ruta);
+  rutasTaller.push(ruta);
+}
+
 const navegador = await chromium.launch({ executablePath: ejecutable, args: ['--no-sandbox'] });
 const contexto = await navegador.newContext({ viewport: { width: 1180, height: 900 } });
 const pagina = await contexto.newPage();
@@ -144,7 +153,7 @@ pagina.on('console', (m) => m.type() === 'error' && erroresConsola.push(m.text()
  * este entorno no es accesible, y permite comprobar de verdad que la app sube
  * lo que crea y aplica lo que le llega de otro aparato.
  */
-const servidorFalso = { subidas: [], borradas: [], pendientesDeEntregar: [] };
+const servidorFalso = { subidas: [], fichas: [], borradas: [], pendientesDeEntregar: [] };
 
 /** Ficha como la que subiría el otro aparato del equipo. */
 function fotoDeAitzi(id) {
@@ -200,6 +209,7 @@ await pagina.route('**/functions/v1/catalogo*', async (ruta) => {
   }
   if (cuerpo.accion === 'guardar') {
     servidorFalso.subidas.push(...cuerpo.fichas.map((f) => f.id));
+    servidorFalso.fichas.push(...cuerpo.fichas);
     return responder({ guardadas: cuerpo.fichas.length });
   }
   if (cuerpo.accion === 'borrar') {
@@ -384,6 +394,93 @@ try {
   comprobar(
     'Se agrupa en su categoría',
     (await pagina.locator('.grupo__nombre').allTextContents()).some((t) => /Cerámica/.test(t)),
+  );
+
+  // ------------------------------------------------ tipos propios
+  await pagina.getByRole('button', { name: 'Ajustes', exact: true }).first().click();
+  await pagina.waitForTimeout(400);
+  await pagina.getByRole('button', { name: /Crear un tipo nuevo/ }).click();
+  await pagina.getByLabel('Nombre del tipo').fill('Tecnología');
+  await pagina.getByLabel('Cuándo usarlo').fill('Robots, circuitos, impresión 3D y programación.');
+  await pagina.getByRole('button', { name: 'Crear el tipo' }).click();
+  await pagina.waitForTimeout(500);
+
+  comprobar(
+    'El tipo propio queda creado',
+    (await pagina.locator('.tipo__cuerpo strong').allTextContents()).includes('Tecnología'),
+    (await pagina.locator('.tipo__cuerpo strong').allTextContents()).join(' | '),
+  );
+
+  // --------------------------------------------------- ficha común
+  await pagina.getByRole('button', { name: 'Importar', exact: true }).click();
+  await pagina.locator('input[accept="image/*"]').setInputFiles(rutasTaller);
+  await pagina.waitForSelector('.estadistica__valor', { timeout: 30000 });
+  comprobar(
+    'Importa las tres fotos del taller',
+    (await pagina.locator('.estadistica__valor').first().textContent())?.trim() === '3',
+  );
+
+  // El aviso y los botones salen cuando termina el análisis en segundo plano.
+  const botonFicha = pagina.getByRole('button', { name: /Rellenar la ficha de las 3 de una vez/ });
+  await botonFicha.waitFor({ state: 'visible', timeout: 30000 });
+  comprobar(
+    'Avisa de que sin clave no se clasifican solas',
+    (await pagina.locator('.aviso-linea').allTextContents()).some((t) =>
+      /no se han clasificado solas/.test(t),
+    ),
+    (await pagina.locator('.aviso-linea').allTextContents()).join(' | '),
+  );
+
+  await botonFicha.click();
+  await pagina.waitForSelector('.hoja__titulo', { timeout: 10000 });
+  await pagina.getByLabel('Título').fill('Taller de robots');
+  // El tipo recién creado tiene que estar en la lista del diálogo.
+  comprobar(
+    'El tipo propio se puede elegir al rellenar',
+    await pagina.getByRole('button', { name: /Tecnología/ }).first().isVisible(),
+  );
+  await pagina.getByRole('button', { name: /Tecnología/ }).first().click();
+  await pagina.getByLabel('Etiquetas que añadir').fill('robots, verano');
+  await pagina.getByRole('button', { name: /Aplicar a las 3 fotos/ }).click();
+  await pagina.waitForTimeout(1200);
+
+  await pagina.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
+  await pagina.getByLabel('Buscar en el catálogo').fill('Taller de robots');
+  await pagina.waitForTimeout(600);
+
+  const nombresTaller = (await pagina.locator('.ficha__nombre').allTextContents()).sort();
+  comprobar(
+    'Las tres quedan numeradas con el mismo título',
+    nombresTaller.join(' | ') === 'Taller de robots 01 | Taller de robots 02 | Taller de robots 03',
+    nombresTaller.join(' | '),
+  );
+  comprobar(
+    'Y agrupadas bajo el tipo propio',
+    (await pagina.locator('.grupo__nombre').allTextContents()).some((t) => /Tecnología/.test(t)),
+    (await pagina.locator('.grupo__nombre').allTextContents()).join(' | '),
+  );
+
+  // Elegir el tipo a mano las saca de la cola de revisión.
+  await pagina.getByLabel('Buscar en el catálogo').fill('');
+  await pagina.waitForTimeout(400);
+  comprobar(
+    'La etiqueta escrita se encuentra buscando',
+    await (async () => {
+      await pagina.getByLabel('Buscar en el catálogo').fill('robots');
+      await pagina.waitForTimeout(500);
+      return (await pagina.locator('.ficha').count()) === 3;
+    })(),
+  );
+  await pagina.getByLabel('Buscar en el catálogo').fill('');
+  await pagina.waitForTimeout(300);
+
+  // El tipo propio viaja pegado a la ficha que se sube al catálogo compartido.
+  await pagina.getByRole('button', { name: /^Sincronizar/ }).click();
+  await pagina.waitForTimeout(2000);
+  comprobar(
+    'El tipo propio viaja con la foto al catálogo compartido',
+    servidorFalso.fichas.some((f) => f.categoriaPropia?.nombre === 'Tecnología'),
+    `categorías subidas: ${[...new Set(servidorFalso.fichas.map((f) => f.categoria))].join(', ')}`,
   );
 
   // El menú debe caber entero también en las pantallas más estrechas.

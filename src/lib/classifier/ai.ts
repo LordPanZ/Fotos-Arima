@@ -1,13 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
-import { IDS_CATEGORIAS, NO_MANUALIDAD, taxonomiaParaPrompt } from '../../taxonomy';
+import { idsCategorias, NO_MANUALIDAD, taxonomiaParaPrompt } from '../../taxonomy';
 import type { Ajustes, ResultadoClasificacion } from '../../types';
 import { aBase64, reescalar } from '../image';
 
-const VALORES_CATEGORIA: [string, ...string[]] = [NO_MANUALIDAD, ...IDS_CATEGORIAS];
-
-const EsquemaClasificacion = z.object({
+/**
+ * El esquema y las instrucciones se arman en cada análisis, no al cargar el
+ * módulo: las categorías propias se registran al leer los ajustes y tienen que
+ * llegar tanto al enum que acota la respuesta como al listado del prompt.
+ * Se cachean por firma para no rehacerlos en cada foto de un lote.
+ */
+function esquemaDe(valores: [string, ...string[]]) {
+  return z.object({
   entra_en_catalogo: z
     .boolean()
     .describe(
@@ -18,10 +23,10 @@ const EsquemaClasificacion = z.object({
     .number()
     .describe('Seguridad de la decisión anterior, de 0 a 1. Calibrada, no optimista.'),
   categoria: z
-    .enum(VALORES_CATEGORIA)
+    .enum(valores)
     .describe('Identificador exacto de la categoría, o "no-manualidad" si no entra en el catálogo.'),
   categoria_alternativa: z
-    .enum(VALORES_CATEGORIA)
+    .enum(valores)
     .nullable()
     .describe('Segunda opción si la pieza podría encajar en otra categoría; si no, null.'),
   tecnica: z
@@ -44,10 +49,11 @@ const EsquemaClasificacion = z.object({
       'Descripción de la pieza o de la escena en 3-6 palabras, en español, sin punto final. ' +
         'Va en el nombre del archivo.',
     ),
-  motivo: z.string().describe('Una frase explicando la decisión.'),
-});
+    motivo: z.string().describe('Una frase explicando la decisión.'),
+  });
+}
 
-const INSTRUCCIONES = `Eres el catalogador del archivo fotográfico de Arima. Tu trabajo tiene dos partes: decidir si la foto entra en el catálogo y, si entra, clasificarla.
+const instrucciones = (categorias: string) => `Eres el catalogador del archivo fotográfico de Arima. Tu trabajo tiene dos partes: decidir si la foto entra en el catálogo y, si entra, clasificarla.
 
 El catálogo recoge DOS COSAS DISTINTAS:
 
@@ -99,7 +105,7 @@ No infles la confianza: por debajo del umbral la foto pasa a revisión manual, q
 acabar las dudosas.
 
 CATEGORÍAS DISPONIBLES (usa el identificador exacto):
-${taxonomiaParaPrompt()}
+${categorias}
 
 REGLAS DE CATEGORÍA:
 - En manualidades, elige por la técnica dominante, no por el motivo representado. Un ángel de ganchillo es
@@ -107,6 +113,8 @@ REGLAS DE CATEGORÍA:
 - "navidad-estacional", "fiesta-eventos" e "infantil-escolar" solo cuando el contexto de la celebración o del
   trabajo escolar pesa más que la técnica. Ojo: una Diskofesta va en "diskofesta", nunca en "fiesta-eventos",
   que es para la decoración hecha a mano de una celebración.
+- Las categorías cuyo identificador empieza por "propia-" las ha creado el equipo de Arima para su archivo.
+  Úsalas igual que las de serie cuando su definición encaje mejor, y respeta su identificador tal cual.
 - Usa "otras-manualidades" únicamente si es claramente artesanía hecha a mano y ninguna categoría encaja.
 - Rellena "categoria_alternativa" siempre que pudiera clasificarse razonablemente en otra categoría.
 
@@ -115,6 +123,25 @@ Se usará como nombre del archivo, así que escribe un sintagma nominal breve y 
 "colgante de pared beige", "tazas esmaltadas en azul", "pista de baile con confeti", "abriendo el cofre con
 la clave". Nada de frases completas, comillas ni punto final. Si no entra en el catálogo, describe
 brevemente lo que sí se ve.`;
+
+/** Esquema e instrucciones para el juego de categorías vigente, cacheados. */
+let preparado: { firma: string; esquema: ReturnType<typeof esquemaDe>; sistema: string } | null = null;
+
+function preparar() {
+  const ids = idsCategorias();
+  const listado = taxonomiaParaPrompt();
+  // La firma incluye el listado entero, no solo los identificadores: así
+  // cambiar la definición de un tipo también rehace el prompt.
+  const firma = `${ids.join('|')}\n${listado}`;
+  if (preparado?.firma !== firma) {
+    preparado = {
+      firma,
+      esquema: esquemaDe([NO_MANUALIDAD, ...ids]),
+      sistema: instrucciones(listado),
+    };
+  }
+  return preparado;
+}
 
 const ESFUERZO: Record<Ajustes['precision'], 'low' | 'medium' | 'high'> = {
   rapida: 'low',
@@ -161,14 +188,15 @@ export async function clasificarConIA(
 ): Promise<ResultadoClasificacion> {
   const { blob } = await reescalar(imagen, LADO_ANALISIS, 0.82, true);
   const datos = await aBase64(blob);
+  const { esquema, sistema } = preparar();
 
   const respuesta = await cliente(ajustes.anthropicApiKey.trim()).beta.messages.parse(
     {
       model: ajustes.modelo,
       max_tokens: 3000,
-      system: INSTRUCCIONES,
+      system: sistema,
       output_config: { effort: ESFUERZO[ajustes.precision] },
-      output_format: betaZodOutputFormat(EsquemaClasificacion),
+      output_format: betaZodOutputFormat(esquema),
       messages: [
         {
           role: 'user',

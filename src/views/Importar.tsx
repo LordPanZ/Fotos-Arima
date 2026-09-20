@@ -4,10 +4,11 @@ import { obtenerToken, cerrarSesionGoogle, hayTokenValido } from '../lib/googleA
 import { borrarSesion, crearSesion, esperarSeleccion } from '../lib/googlePicker';
 import { importarArchivos, importarDesdeGoogle, importarEnvio, type ProgresoImportacion, type ResultadoImportacion } from '../lib/importar';
 import { EXTENSION_ENVIO } from '../lib/envio';
-import { necesitaRevision } from '../lib/classifier';
+import { hayClaveIA, necesitaRevision } from '../lib/classifier';
 import { AvisoLinea, BarraProgreso, Vacio } from '../components/comunes';
+import { FichaComun } from '../components/FichaComun';
 import {
-  IconoAjustes, IconoCarpeta, IconoCompartir, IconoGoogle, IconoRefrescar, IconoSobre,
+  IconoAjustes, IconoCarpeta, IconoCompartir, IconoEtiquetas, IconoGoogle, IconoRefrescar, IconoSobre,
 } from '../components/Icons';
 import { abrirWhatsApp, compartirEnlace, copiarEnlace, urlDelFormulario } from '../lib/compartirEnlace';
 
@@ -31,6 +32,7 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
   const [conectado, setConectado] = useState(() => hayTokenValido());
   // URL del selector cuando el navegador ha bloqueado la ventana emergente.
   const [enlaceSelector, setEnlaceSelector] = useState<string | null>(null);
+  const [fichaComun, setFichaComun] = useState(false);
   const abortador = useRef<AbortController | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
   const entradaEnvio = useRef<HTMLInputElement>(null);
@@ -476,11 +478,32 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
             </ul>
           )}
 
+          {!tienda.progreso.activo && resumen.nuevas.length > 0 && !hayClaveIA(ajustes) && (
+            <AvisoLinea>
+              Estas fotos <strong>no se han clasificado solas</strong>: falta la clave de Claude en
+              Ajustes, y sin ella la app no sabe distinguir las técnicas. Están esperando en{' '}
+              <strong>Revisar</strong>. Puedes ponerles el tipo tú —de una en una o todas de golpe
+              con el botón de aquí abajo— o añadir la clave y volver a analizarlas.
+            </AvisoLinea>
+          )}
+
           {!tienda.progreso.activo && resumen.nuevas.length > 0 && (
             <div className="grupo-botones" style={{ marginTop: 14 }}>
-              <button type="button" className="boton boton--primario" onClick={() => alIr('biblioteca')}>
+              <button type="button" className="boton boton--primario" onClick={() => setFichaComun(true)}>
+                <IconoEtiquetas className="boton__icono" />
+                Rellenar {resumen.nuevas.length === 1
+                  ? 'la ficha'
+                  : `la ficha de las ${resumen.nuevas.length} de una vez`}
+              </button>
+              <button type="button" className="boton" onClick={() => alIr('biblioteca')}>
                 Ver el catálogo
               </button>
+              {!hayClaveIA(ajustes) && (
+                <button type="button" className="boton boton--fantasma" onClick={() => alIr('ajustes')}>
+                  <IconoAjustes className="boton__icono" />
+                  Configurar la clasificación
+                </button>
+              )}
               {porRevisar > 0 && (
                 <button type="button" className="boton" onClick={() => alIr('revisar')}>
                   Revisar {porRevisar} {porRevisar === 1 ? 'dudosa' : 'dudosas'}
@@ -496,6 +519,22 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
           Importa unas cuantas fotos y la app las clasificará por categoría: ganchillo, cerámica,
           macramé, papel, Diskofesta, Ihes Gela… Después podrás renombrarlas y compartirlas.
         </Vacio>
+      )}
+
+      {fichaComun && resumen && resumen.nuevas.length > 0 && (
+        <FichaComun
+          // Las de la tienda, no las del resumen: el análisis en segundo plano
+          // ya puede haberlas cambiado mientras la persona miraba el resultado.
+          fotos={resumen.nuevas.map((n) => tienda.fotos.find((f) => f.id === n.id) ?? n)}
+          alCerrar={() => setFichaComun(false)}
+          alAplicar={async (cambios) => {
+            await tienda.actualizarFotos(cambios);
+            tienda.avisar(
+              `Ficha aplicada a ${cambios.length} ${cambios.length === 1 ? 'foto' : 'fotos'}.`,
+              'exito',
+            );
+          }}
+        />
       )}
     </>
   );

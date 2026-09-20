@@ -8,7 +8,7 @@
  * confianza baja, que es donde debe estar si nadie lo ha mirado.
  */
 
-import { CATEGORIAS, NO_MANUALIDAD, SIN_CLASIFICAR } from '../../taxonomy';
+import { listaCategorias, NO_MANUALIDAD, SIN_CLASIFICAR } from '../../taxonomy';
 import type { ResultadoClasificacion } from '../../types';
 
 interface Estadisticas {
@@ -132,7 +132,7 @@ function categoriaPorNombre(archivo: string): { categoria: string; termino: stri
   const limpio = sinAcentos(archivo).replace(/[_\-.]+/g, ' ');
   let mejor: { categoria: string; termino: string } | null = null;
 
-  for (const cat of CATEGORIAS) {
+  for (const cat of listaCategorias()) {
     for (const sinonimo of cat.sinonimos) {
       const termino = sinAcentos(sinonimo);
       if (termino.length < 4) continue;

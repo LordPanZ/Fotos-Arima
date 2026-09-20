@@ -6,7 +6,10 @@ import { TOKENS, nombreDesdePlantilla } from '../lib/naming';
 import { estaEnCatalogo, hayClaveIA, mensajeDeError, probarClave } from '../lib/classifier';
 import { useTienda } from '../state/store';
 import { AvisoLinea, formatearBytes } from '../components/comunes';
-import { IconoChispa, IconoComprobado, IconoDescargar, IconoGoogle, IconoPapelera } from '../components/Icons';
+import { CategoriasPropias } from '../components/CategoriasPropias';
+import {
+  IconoChispa, IconoComprobado, IconoDescargar, IconoEtiquetas, IconoGoogle, IconoPapelera,
+} from '../components/Icons';
 
 const MODELOS = [
   { id: 'claude-opus-5', nombre: 'Claude Opus 5 — el más preciso' },
@@ -89,6 +92,20 @@ export function Ajustes() {
       </div>
 
       {/* --------------------------------------------------- Clasificador */}
+      <div className="tarjeta">
+        <div className="tarjeta__titulo">
+          <IconoEtiquetas style={{ width: 19, height: 19 }} />
+          <h2>Tipos del catálogo</h2>
+        </div>
+        <CategoriasPropias
+          ajustes={borrador}
+          fotos={tienda.fotos}
+          avisar={tienda.avisar}
+          alGuardar={(categorias) => cambiar('categoriasPropias', categorias)}
+          alVaciarCategoria={(cambios) => void tienda.actualizarFotos(cambios)}
+        />
+      </div>
+
       <div className="tarjeta">
         <div className="tarjeta__titulo">
           <IconoChispa style={{ width: 19, height: 19 }} />

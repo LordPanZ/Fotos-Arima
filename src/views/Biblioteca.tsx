@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
 import type { Foto } from '../types';
-import { CATEGORIAS, NO_MANUALIDAD, SIN_CLASIFICAR, categoria } from '../taxonomy';
+import { listaCategorias, NO_MANUALIDAD, SIN_CLASIFICAR, categoria } from '../taxonomy';
 import { estaEnCatalogo, necesitaRevision } from '../lib/classifier';
 import { exportarZip } from '../lib/exportZip';
 import { useTienda } from '../state/store';
 import { DetalleFoto } from '../components/DetalleFoto';
 import { Rejilla } from '../components/Galeria';
 import { BarraProgreso, Vacio } from '../components/comunes';
+import { FichaComun } from '../components/FichaComun';
 import {
   IconoBuscar, IconoChispa, IconoCompartir, IconoComprobado, IconoDescargar,
-  IconoEstrella, IconoLapiz, IconoPapelera,
+  IconoEstrella, IconoEtiquetas, IconoLapiz, IconoPapelera,
 } from '../components/Icons';
 
 type Vista = 'catalogo' | 'revisar' | 'descartadas' | 'favoritas' | 'todas';
@@ -53,6 +54,7 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
   const [busqueda, setBusqueda] = useState('');
   const [abierta, setAbierta] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [fichaComun, setFichaComun] = useState(false);
 
   const visibles = useMemo(() => {
     const umbral = ajustes.umbralConfianza;
@@ -156,7 +158,7 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
           >
             Todos los tipos <span className="filtro__cuenta">{visibles.length}</span>
           </button>
-          {[...CATEGORIAS, { id: SIN_CLASIFICAR }, { id: NO_MANUALIDAD }]
+          {[...listaCategorias(), { id: SIN_CLASIFICAR }, { id: NO_MANUALIDAD }]
             .filter((c) => cuentas.has(c.id))
             .map((c) => {
               const cat = categoria(c.id);
@@ -236,6 +238,16 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
           <button
             type="button"
             className="boton boton--pequeno"
+            disabled={ocupado}
+            onClick={() => setFichaComun(true)}
+          >
+            <IconoEtiquetas className="boton__icono" />
+            Rellenar ficha
+          </button>
+
+          <button
+            type="button"
+            className="boton boton--pequeno"
             title="Aplica la plantilla de Ajustes, también a los nombres escritos a mano"
             disabled={ocupado}
             onClick={() =>
@@ -274,7 +286,7 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
             }}
           >
             <option value="">Mover a…</option>
-            {CATEGORIAS.map((c) => (
+            {listaCategorias().map((c) => (
               <option key={c.id} value={c.id}>{c.emoji} {c.nombre}</option>
             ))}
             <option value={NO_MANUALIDAD}>🚫 No entra en el catálogo</option>
@@ -371,6 +383,20 @@ export function Biblioteca({ alIrAImportar }: { alIrAImportar(): void }) {
           contexto={visibles}
           alCerrar={() => setAbierta(null)}
           alCambiarFoto={(f) => setAbierta(f.id)}
+        />
+      )}
+
+      {fichaComun && elegidas.length > 0 && (
+        <FichaComun
+          fotos={elegidas}
+          alCerrar={() => setFichaComun(false)}
+          alAplicar={async (cambios) => {
+            await tienda.actualizarFotos(cambios);
+            tienda.avisar(
+              `Ficha aplicada a ${cambios.length} ${cambios.length === 1 ? 'foto' : 'fotos'}.`,
+              'exito',
+            );
+          }}
         />
       )}
     </>

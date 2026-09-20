@@ -1,3 +1,5 @@
+import type { CategoriaPropia } from './taxonomy';
+
 export type Origen = 'google' | 'local' | 'envio';
 
 /** Datos del taller o evento, tal y como los rellenó quien envió las fotos. */
@@ -48,6 +50,12 @@ export interface Foto {
   entraEnCatalogo: boolean | null;
   confianza: number;
   categoria: string;
+  /**
+   * Definición de la categoría cuando es una creada a mano. Viaja con la ficha
+   * para que el otro dispositivo del equipo sepa pintarla aunque no la tenga
+   * dada de alta: el catálogo se comparte, pero los ajustes no.
+   */
+  categoriaPropia?: CategoriaPropia;
   /** Segunda opción del clasificador, útil al revisar. */
   categoriaAlternativa?: string;
   tecnica?: string;
@@ -82,6 +90,8 @@ export interface Ajustes {
   ocultarDescartadas: boolean;
   /** Lado mayor (px) de la copia que se guarda en el dispositivo. */
   tamanoMaximo: number;
+  /** Tipos creados a mano, además de los que trae la app. */
+  categoriasPropias: CategoriaPropia[];
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
@@ -96,6 +106,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   concurrencia: 3,
   ocultarDescartadas: true,
   tamanoMaximo: 2048,
+  categoriasPropias: [],
 };
 
 export interface ResultadoClasificacion {

@@ -84,6 +84,29 @@ del archivo si menciona una técnica conocida. **No distingue tipos de
 manualidad**: todo lo demás queda en *Por revisar* con confianza baja, que es la
 respuesta honesta cuando no se puede saber.
 
+La app lo dice donde se nota: tras importar, el resumen avisa de que esas fotos
+no se han clasificado solas y de que están esperando en *Revisar*; y la propia
+pantalla de revisión recuerda que ahí cae todo mientras falte la clave. Para no
+ir una a una, **Rellenar ficha** (en el resumen de la importación y en la barra
+de selección del catálogo) pone tipo, título y etiquetas a todas las elegidas de
+una vez; elegir el tipo a mano cuenta como revisión y la foto entra directa al
+catálogo.
+
+## Categorías propias
+
+Las 20 categorías de serie viven en `src/taxonomy.ts`. Encima de ellas hay un
+registro mutable que la tienda rellena al leer los ajustes con las que se han
+creado a mano (`registrarCategoriasPropias`). Por eso `categoria(id)`,
+`listaCategorias()` y `taxonomiaParaPrompt()` son funciones y no constantes: el
+esquema que acota la respuesta del modelo y el listado del prompt se arman en
+cada análisis, cacheados por el contenido del listado.
+
+Los ajustes no se sincronizan, pero el catálogo sí, así que cada foto que está
+en una categoría propia se lleva la definición pegada a la ficha
+(`categoriaPropia`). Al recargar, el otro dispositivo da de alta las que le
+llegan y las pinta igual. El identificador se prefija con `propia-` para que
+nunca choque con una de serie, ni siquiera si mañana se añaden más.
+
 ## Coste aproximado con IA
 
 Orientativo, por foto analizada (la imagen son unos 800 tokens de entrada):
