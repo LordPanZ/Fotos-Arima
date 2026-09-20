@@ -26,6 +26,11 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
   const [progreso, setProgreso] = useState<ProgresoImportacion | null>(null);
   const [resumen, setResumen] = useState<ResultadoImportacion | null>(null);
   const [encima, setEncima] = useState(false);
+  // `hayTokenValido()` lee sessionStorage, así que no vale llamarlo al pintar:
+  // hace falta un estado para que los botones cambien al conectar o desconectar.
+  const [conectado, setConectado] = useState(() => hayTokenValido());
+  // URL del selector cuando el navegador ha bloqueado la ventana emergente.
+  const [enlaceSelector, setEnlaceSelector] = useState<string | null>(null);
   const abortador = useRef<AbortController | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
   const entradaEnvio = useRef<HTMLInputElement>(null);
@@ -53,12 +58,35 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
   const importarGoogle = useCallback(async () => {
     if (fase !== 'listo') return;
 
-    // La ventana se abre aquí, dentro del gesto de la persona: si esperamos a
-    // tener la URL del selector, el navegador la bloquea como emergente.
-    const ventana = window.open('', '_blank', 'noopener,width=520,height=720');
+    // Paso 1: conseguir el permiso. Google Identity abre su propia ventana, así
+    // que aquí no abrimos ninguna más: dos emergentes a la vez hacen que el
+    // móvil muestre una pestaña en blanco y se quede ahí colgada.
+    if (!hayTokenValido()) {
+      setResumen(null);
+      setEnlaceSelector(null);
+      setFase('conectando');
+      try {
+        await obtenerToken({ clientId: ajustes.googleClientId, cuenta: CUENTA_SUGERIDA });
+        setConectado(true);
+        tienda.avisar('Cuenta de Google conectada. Vuelve a pulsar para elegir las fotos.');
+      } catch (error) {
+        tienda.avisar(error instanceof Error ? error.message : String(error), 'error');
+      } finally {
+        setFase('listo');
+      }
+      return;
+    }
+
+    // Paso 2: ya hay permiso, así que la única ventana que se abre es la del
+    // selector. Se abre vacía dentro del gesto de la persona porque la URL
+    // tarda en llegar y, si esperásemos, el navegador la bloquearía.
+    // Sin `noopener`: con esa opción `window.open` devuelve `null` y nos
+    // quedaríamos con una pestaña en blanco que nunca llega a ningún sitio.
+    const ventana = window.open('', '_blank', 'width=520,height=720');
     const control = new AbortController();
     abortador.current = control;
     setResumen(null);
+    setEnlaceSelector(null);
     setFase('conectando');
 
     let token: string | null = null;
@@ -69,8 +97,15 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
       const sesion = await crearSesion(token);
       idSesion = sesion.id;
 
-      if (ventana && !ventana.closed) ventana.location.href = sesion.pickerUri;
-      else window.location.href = sesion.pickerUri;
+      if (ventana && !ventana.closed) {
+        ventana.location.href = sesion.pickerUri;
+      } else {
+        // Emergente bloqueada. Nunca sacamos a la persona de esta pantalla: si
+        // nos fuésemos a la URL del selector, la app dejaría de escuchar la
+        // selección y la importación no terminaría nunca. En su lugar
+        // ofrecemos el enlace para que lo abra con un toque.
+        setEnlaceSelector(sesion.pickerUri);
+      }
 
       setFase('esperando');
       const elegido = await esperarSeleccion(token, sesion, {
@@ -99,6 +134,7 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
       abortador.current = null;
       setFase('listo');
       setProgreso(null);
+      setEnlaceSelector(null);
     }
   }, [fase, ajustes, tienda, mostrarResultado]);
 
@@ -227,11 +263,30 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
           resto de tu biblioteca.
         </p>
 
-        {fase === 'esperando' && (
+        {fase === 'esperando' && !enlaceSelector && (
           <AvisoLinea>
             Elige las fotos en la ventana de Google y pulsa <strong>Hecho</strong>. Esta pantalla lo
             detectará sola. Si has cerrado la ventana sin querer, cancela y vuelve a empezar.
           </AvisoLinea>
+        )}
+
+        {enlaceSelector && (
+          <>
+            <AvisoLinea>
+              El navegador ha bloqueado la ventana emergente. Abre el selector con este botón,
+              elige las fotos y pulsa <strong>Hecho</strong>: <strong>no cierres esta pestaña</strong>,
+              es la que recoge la selección.
+            </AvisoLinea>
+            <a
+              className="boton boton--primario"
+              href={enlaceSelector}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <IconoGoogle style={{ width: 17, height: 17 }} />
+              Abrir el selector de Google Fotos
+            </a>
+          </>
         )}
 
         {!ajustes.googleClientId ? (
@@ -262,7 +317,7 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
             {fase === 'conectando' && 'Conectando…'}
             {fase === 'esperando' && 'Esperando tu selección…'}
             {fase === 'importando' && 'Importando…'}
-            {fase === 'listo' && 'Elegir fotos en Google Fotos'}
+            {fase === 'listo' && (conectado ? 'Elegir fotos en Google Fotos' : 'Conectar con Google Fotos')}
           </button>
 
           {ocupado && (
@@ -278,12 +333,13 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
             </button>
           )}
 
-          {hayTokenValido() && !ocupado && (
+          {conectado && !ocupado && (
             <button
               type="button"
               className="boton boton--fantasma"
               onClick={() => {
                 cerrarSesionGoogle();
+                setConectado(false);
                 tienda.avisar('Sesión de Google cerrada en este dispositivo.');
               }}
             >

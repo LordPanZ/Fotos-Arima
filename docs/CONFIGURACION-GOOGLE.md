@@ -136,8 +136,26 @@ VITE_GOOGLE_CLIENT_ID=123456789012-a1b2c3d4e5f6g7h8.apps.googleusercontent.com
 | «Google no admite este origen» o `redirect_uri_mismatch` | El origen desde el que abres la app no está en **Authorized JavaScript origins** (paso 4.5). Compruébalo en Ajustes: la app te muestra el origen exacto que debes añadir. Los cambios en Google Cloud pueden tardar unos minutos en surtir efecto. |
 | «Google ha denegado el acceso» (403) | Falta activar la Photos Picker API (paso 2), o la cuenta no está en **Test users** (paso 3.4), o falta el permiso en **Data Access** (paso 3.3). |
 | «La sesión de Google ha caducado» | Normal: el token dura una hora. Vuelve a pulsar el botón de importar. |
-| La ventana del selector no se abre | El navegador la ha bloqueado como emergente. Permite las ventanas emergentes para este sitio. |
+| La ventana del selector no se abre | El navegador la ha bloqueado como emergente. La app lo detecta y te ofrece un botón **«Abrir el selector de Google Fotos»**: púlsalo y **no cierres la pestaña de la app**, que es la que recoge la selección. |
+| **La ventana de Google se queda en blanco** | Ver abajo. |
 | «El navegador ha bloqueado la descarga de la foto» | Alguna extensión o una política del navegador está cortando la petición. La aplicación de escritorio no tiene esta limitación. |
+
+### La ventana de Google se queda en blanco
+
+Pasa casi siempre por una de estas tres razones, en este orden:
+
+1. **El ID de cliente todavía no está activo.** Google avisa al crearlo: «la
+   configuración puede tardar entre 5 minutos y algunas horas en aplicarse».
+   Espera diez minutos y vuelve a intentarlo. Es lo más frecuente cuando acabas
+   de crearlo.
+2. **La cuenta no está en «Usuarios de prueba»** (paso 3.4). Añade ahí cada
+   correo que vaya a importar fotos.
+3. **El navegador está bloqueando las cookies de `accounts.google.com`.**
+   Ocurre en modo incógnito y con algunos bloqueadores. Abre la app en una
+   pestaña normal del navegador —no como app instalada— y prueba de nuevo.
+
+Si la ventana no responde, la app deja de esperar a los tres minutos y explica
+esto mismo en pantalla, en vez de quedarse en «Conectando…» para siempre.
 
 ## Usarlo después desde el iPhone
 

@@ -35,6 +35,9 @@ jobs:
       - name: Prueba de humo
         run: npm run smoke
 
+      - name: Prueba del camino de Google Fotos
+        run: npm run smoke:google
+
       - name: Prueba del formulario de monitores
         run: npm run smoke:formulario
 

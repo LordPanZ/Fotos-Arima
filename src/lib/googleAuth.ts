@@ -88,6 +88,9 @@ export function hayTokenValido(): boolean {
   return leerGuardado() !== null;
 }
 
+/** Tiempo máximo esperando a que la ventana de Google responda. */
+const ESPERA_MAXIMA = 3 * 60 * 1000;
+
 let cargaGis: Promise<void> | null = null;
 
 function cargarGis(): Promise<void> {
@@ -143,26 +146,47 @@ export async function obtenerToken(opciones: OpcionesToken): Promise<string> {
   if (!oauth2) throw new Error('Google Identity Services no está disponible en este navegador.');
 
   return new Promise<string>((resolve, reject) => {
+    // Si la ventana de Google se abre pero nunca responde (pasa cuando el ID de
+    // cliente aún no se ha propagado, o cuando el navegador bloquea las cookies
+    // de accounts.google.com), sin esto la promesa se queda pendiente para
+    // siempre y la pantalla se queda en «Conectando…» sin explicar nada.
+    const reloj = window.setTimeout(() => {
+      terminar(() =>
+        reject(
+          new Error(
+            'Google no ha respondido. Si la ventana se quedó en blanco: el ID de cliente ' +
+              'puede tardar unos minutos en activarse tras crearlo, y el permiso solo ' +
+              'funciona con las cuentas añadidas como usuarios de prueba. Prueba otra vez ' +
+              'en unos minutos y, si sigue igual, abre la app en el navegador (no como app ' +
+              'instalada) y permite las cookies de accounts.google.com.',
+          ),
+        ),
+      );
+    }, ESPERA_MAXIMA);
+
+    let cerrado = false;
+    function terminar(accion: () => void): void {
+      if (cerrado) return;
+      cerrado = true;
+      window.clearTimeout(reloj);
+      accion();
+    }
+
     const cliente = oauth2.initTokenClient({
       client_id: opciones.clientId,
       scope: AMBITO_SELECTOR,
       hint: opciones.cuenta,
       callback: (respuesta) => {
         if (respuesta.error || !respuesta.access_token) {
-          reject(new Error(descifrarError(respuesta)));
+          terminar(() => reject(new Error(descifrarError(respuesta))));
           return;
         }
-        guardar(respuesta.access_token, respuesta.expires_in ?? 3600);
-        resolve(respuesta.access_token);
+        const token = respuesta.access_token;
+        guardar(token, respuesta.expires_in ?? 3600);
+        terminar(() => resolve(token));
       },
       error_callback: (error) => {
-        reject(
-          new Error(
-            error.type === 'popup_closed'
-              ? 'Has cerrado la ventana de Google antes de dar permiso.'
-              : error.message || 'Google ha rechazado la petición de permiso.',
-          ),
-        );
+        terminar(() => reject(new Error(descifrarErrorCliente(error))));
       },
     });
 
@@ -170,6 +194,19 @@ export async function obtenerToken(opciones: OpcionesToken): Promise<string> {
       opciones.silencioso ? { prompt: '', hint: opciones.cuenta } : { hint: opciones.cuenta },
     );
   });
+}
+
+function descifrarErrorCliente(error: { type?: string; message?: string }): string {
+  if (error.type === 'popup_closed') {
+    return 'Has cerrado la ventana de Google antes de dar permiso.';
+  }
+  if (error.type === 'popup_failed_to_open') {
+    return (
+      'El navegador ha bloqueado la ventana de Google. Permite las ventanas emergentes ' +
+      'para esta página y vuelve a intentarlo.'
+    );
+  }
+  return error.message || 'Google ha rechazado la petición de permiso.';
 }
 
 function descifrarError(respuesta: RespuestaToken): string {
