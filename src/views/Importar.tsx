@@ -6,7 +6,9 @@ import { importarArchivos, importarDesdeGoogle, importarEnvio, type ProgresoImpo
 import { EXTENSION_ENVIO } from '../lib/envio';
 import { necesitaRevision } from '../lib/classifier';
 import { AvisoLinea, BarraProgreso, Vacio } from '../components/comunes';
-import { IconoCarpeta, IconoCompartir, IconoGoogle, IconoRefrescar, IconoSobre } from '../components/Icons';
+import {
+  IconoAjustes, IconoCarpeta, IconoCompartir, IconoGoogle, IconoRefrescar, IconoSobre,
+} from '../components/Icons';
 import { abrirWhatsApp, compartirEnlace, copiarEnlace, urlDelFormulario } from '../lib/compartirEnlace';
 
 const TEXTO_INVITACION =
@@ -16,7 +18,7 @@ type Fase = 'listo' | 'conectando' | 'esperando' | 'importando';
 
 const CUENTA_SUGERIDA = 'arimacooltour@gmail.com';
 
-export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar'): void }) {
+export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'ajustes'): void }) {
   const tienda = useTienda();
   const { ajustes } = tienda;
 
@@ -156,14 +158,6 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar'): vo
     <>
       <h1 style={{ marginBottom: 14 }}>Importar fotos</h1>
 
-      {!ajustes.googleClientId && (
-        <AvisoLinea>
-          Para conectar con Google Fotos falta el <strong>ID de cliente de OAuth</strong>. Añádelo en
-          Ajustes. Mientras tanto puedes importar archivos desde el dispositivo, que funciona sin
-          configurar nada.
-        </AvisoLinea>
-      )}
-
       <div className="tarjeta">
         <div className="tarjeta__titulo">
           <IconoCompartir style={{ width: 19, height: 19 }} />
@@ -240,12 +234,25 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar'): vo
           </AvisoLinea>
         )}
 
+        {!ajustes.googleClientId ? (
+          <>
+            <AvisoLinea>
+              Falta configurar el acceso a Google Fotos. Es un paso de una sola vez: se crea un
+              «ID de cliente» en Google y se pega en Ajustes. Los pasos están en{' '}
+              <code>docs/CONFIGURACION-GOOGLE.md</code>.
+            </AvisoLinea>
+            <button type="button" className="boton boton--primario" onClick={() => alIr('ajustes')}>
+              <IconoAjustes className="boton__icono" />
+              Ir a Ajustes y configurarlo
+            </button>
+          </>
+        ) : (
         <div className="grupo-botones">
           <button
             type="button"
             className="boton boton--primario"
             onClick={() => void importarGoogle()}
-            disabled={ocupado || !ajustes.googleClientId}
+            disabled={ocupado}
           >
             {fase === 'listo' ? (
               <IconoGoogle style={{ width: 17, height: 17 }} />
@@ -284,6 +291,7 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar'): vo
             </button>
           )}
         </div>
+        )}
       </div>
 
       <div className="tarjeta">

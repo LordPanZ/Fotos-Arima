@@ -321,6 +321,28 @@ try {
     (await pagina.locator('.seleccion-barra__cuenta').textContent())?.includes('1'),
   );
 
+  // Sin configurar Google, el botón no debe quedarse gris y mudo.
+  await pagina.getByRole('button', { name: 'Importar', exact: true }).click();
+  await pagina.waitForTimeout(500);
+  comprobar(
+    'Explica por qué no se puede usar Google Fotos todavía',
+    (await pagina.locator('.aviso-linea').allTextContents()).some((t) =>
+      /Falta configurar el acceso a Google Fotos/.test(t),
+    ),
+  );
+  comprobar(
+    'Y ofrece ir a configurarlo',
+    await pagina.getByRole('button', { name: /Ir a Ajustes y configurarlo/ }).isVisible(),
+  );
+  await pagina.getByRole('button', { name: /Ir a Ajustes y configurarlo/ }).click();
+  await pagina.waitForTimeout(500);
+  comprobar(
+    'El botón lleva a los ajustes de Google',
+    await pagina.getByLabel('ID de cliente de OAuth').isVisible(),
+  );
+  await pagina.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
+  await pagina.waitForTimeout(400);
+
   // -------------------------------------------------------- búsqueda
   await pagina.getByRole('button', { name: 'Quitar selección' }).click();
   await pagina.getByLabel('Buscar en el catálogo').fill('macramé');
