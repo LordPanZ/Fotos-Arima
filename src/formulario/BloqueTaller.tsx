@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { MATERIALES } from '../materiales';
 import { IconoCarpeta, IconoCerrar } from '../components/Icons';
+import { pareceVideo } from '../lib/video';
 
 export interface Elegida {
   archivo: File;
@@ -193,11 +194,11 @@ export function BloqueTaller({ taller, indice, total, ocupado, alCambiar, alQuit
       <div className="tarjeta">
         <div className="tarjeta__titulo">
           <IconoCarpeta style={{ width: 19, height: 19 }} />
-          <h2>Argazkiak *</h2>
+          <h2>Argazkiak eta bideoak *</h2>
         </div>
         <p className="tarjeta__ayuda">
           Aukeratu tailer honetako argazkiak. Bidali aurretik txikitu egiten dira, beraz ia ez dute
-          daturik kontsumitzen.
+          daturik kontsumitzen. Bideoak ere bidal ditzakezu, osorik doazenez 48 MB arte bakoitza.
         </p>
 
         <div
@@ -213,18 +214,18 @@ export function BloqueTaller({ taller, indice, total, ocupado, alCambiar, alQuit
           }}
         >
           <div>
-            <strong>{taller.fotos.length ? 'Argazki gehiago' : 'Aukeratu argazkiak'}</strong>
+            <strong>{taller.fotos.length ? 'Gehiago aukeratu' : 'Aukeratu argazkiak edo bideoak'}</strong>
             <div style={{ color: 'var(--texto-2)', fontSize: '0.85rem', marginTop: 4 }}>
               {taller.fotos.length
                 ? `${taller.fotos.length} argazki · ${formatearBytes(pesoDe(taller))}`
-                : `Gehienez ${LIMITE_FOTOS} argazki`}
+                : `Gehienez ${LIMITE_FOTOS} fitxategi`}
             </div>
           </div>
         </div>
         <input
           ref={entrada}
           type="file"
-          accept="image/*"
+          accept="image/*,video/*"
           multiple
           className="sr-solo"
           onChange={(e) => {
@@ -237,7 +238,13 @@ export function BloqueTaller({ taller, indice, total, ocupado, alCambiar, alQuit
           <div className="formulario__tiras">
             {taller.fotos.map((foto, posicion) => (
               <div className="formulario__tira" key={`${foto.archivo.name}-${posicion}`}>
-                <img src={foto.url} alt={foto.archivo.name} loading="lazy" />
+                {pareceVideo(foto.archivo) ? (
+                  // Un <img> con un vídeo sale roto: aquí basta con el primer
+                  // fotograma, que es lo que pinta `preload="metadata"`.
+                  <video src={foto.url} muted playsInline preload="metadata" aria-label={foto.archivo.name} />
+                ) : (
+                  <img src={foto.url} alt={foto.archivo.name} loading="lazy" />
+                )}
                 <button
                   type="button"
                   className="formulario__quitar"
@@ -254,7 +261,7 @@ export function BloqueTaller({ taller, indice, total, ocupado, alCambiar, alQuit
 
         {taller.fotos.length >= LIMITE_FOTOS && (
           <p className="formulario__aviso">
-            {LIMITE_FOTOS} argazkiko mugara iritsi zara. Bidali gainerakoak beste bidalketa batean.
+            {LIMITE_FOTOS} fitxategiko mugara iritsi zara. Bidali gainerakoak beste bidalketa batean.
           </p>
         )}
       </div>

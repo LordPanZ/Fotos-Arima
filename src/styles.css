@@ -379,6 +379,15 @@ a { color: var(--acento); }
 
 .ficha__marco { position: relative; aspect-ratio: 1; background: var(--fondo-2); overflow: hidden; }
 .ficha__imagen { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ficha__video {
+  position: absolute; left: 7px; bottom: 7px;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px; border-radius: 999px;
+  background: rgba(20, 16, 14, 0.72); color: #fff;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
 .ficha__pie { padding: 8px 9px 9px; min-width: 0; }
 .ficha__nombre {
   font-size: 0.8rem; font-weight: 620; line-height: 1.3;
@@ -491,6 +500,7 @@ a { color: var(--acento); }
   display: grid; place-items: center;
   min-height: 220px;
 }
+.visor video { width: 100%; max-height: 62vh; border-radius: var(--radio-s); background: #000; display: block; }
 .visor img { width: 100%; max-height: 54vh; object-fit: contain; display: block; }
 
 .datos { display: grid; gap: 9px; }
@@ -529,6 +539,7 @@ a { color: var(--acento); }
   display: grid; place-items: center;
   margin-bottom: 14px;
 }
+.revision__marco video { width: 100%; max-height: 48vh; background: #000; display: block; }
 .revision__marco img { width: 100%; max-height: 46vh; object-fit: contain; display: block; }
 .revision__sugerencia {
   display: flex; align-items: center; gap: 9px;

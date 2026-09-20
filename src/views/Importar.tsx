@@ -354,8 +354,9 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
           <h2>Desde este dispositivo</h2>
         </div>
         <p className="tarjeta__ayuda">
-          Arrastra aquí fotos o carpetas, o selecciónalas. Sirve también para las descargas de
-          Google Takeout. No hace falta configurar nada.
+          Arrastra aquí fotos, vídeos o carpetas, o selecciónalas. Sirve también para las descargas
+          de Google Takeout. No hace falta configurar nada. Los vídeos se guardan tal cual, sin
+          recomprimir, hasta 48 MB cada uno.
         </p>
 
         <div
@@ -383,7 +384,7 @@ export function Importar({ alIr }: { alIr(destino: 'biblioteca' | 'revisar' | 'a
         <input
           ref={entrada}
           type="file"
-          accept="image/*"
+          accept="image/*,video/*"
           multiple
           className="sr-solo"
           onChange={(e) => {

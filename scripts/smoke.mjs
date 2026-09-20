@@ -14,6 +14,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { imagenDePrueba, videoDePrueba } from './medios.mjs';
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(raiz, 'dist');
@@ -64,59 +65,6 @@ function comprobar(descripcion, condicion, detalle = '') {
   console.log(`${condicion ? '✓' : '✗'} ${descripcion}${detalle && !condicion ? ` — ${detalle}` : ''}`);
 }
 
-/**
- * Genera una imagen con textura fotográfica (degradados + ruido).
- * Un dibujo plano de colores sólidos lo descartaría el heurístico como captura
- * de pantalla, que es justo lo que debe hacer: para probar el camino normal
- * hace falta algo que se parezca a una foto.
- */
-async function imagenDePrueba(destino) {
-  const navegador = await chromium.launch({ executablePath: ejecutable, args: ['--no-sandbox'] });
-  const pagina = await navegador.newPage({ viewport: { width: 320, height: 320 } });
-
-  const datos = await pagina.evaluate(() => {
-    const lienzo = document.createElement('canvas');
-    lienzo.width = 320;
-    lienzo.height = 320;
-    const ctx = lienzo.getContext('2d');
-
-    const fondo = ctx.createLinearGradient(0, 0, 320, 320);
-    fondo.addColorStop(0, '#d8c3a5');
-    fondo.addColorStop(0.5, '#b08968');
-    fondo.addColorStop(1, '#7f5539');
-    ctx.fillStyle = fondo;
-    ctx.fillRect(0, 0, 320, 320);
-
-    for (let i = 0; i < 260; i += 1) {
-      const x = Math.random() * 320;
-      const y = Math.random() * 320;
-      const r = 6 + Math.random() * 26;
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, `hsla(${Math.random() * 360}, 55%, ${35 + Math.random() * 45}%, 0.55)`);
-      g.addColorStop(1, 'transparent');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Ruido por píxel: sube mucho el número de colores distintos.
-    const imagen = ctx.getImageData(0, 0, 320, 320);
-    for (let i = 0; i < imagen.data.length; i += 4) {
-      const ruido = (Math.random() - 0.5) * 46;
-      imagen.data[i] = Math.max(0, Math.min(255, imagen.data[i] + ruido));
-      imagen.data[i + 1] = Math.max(0, Math.min(255, imagen.data[i + 1] + ruido));
-      imagen.data[i + 2] = Math.max(0, Math.min(255, imagen.data[i + 2] + ruido));
-    }
-    ctx.putImageData(imagen, 0, 0);
-
-    return lienzo.toDataURL('image/png').split(',')[1];
-  });
-
-  await writeFile(destino, Buffer.from(datos, 'base64'));
-  await navegador.close();
-}
-
 const ejecutable = EJECUTABLES.find((r) => existsSync(r));
 if (!ejecutable) {
   console.error('No se ha encontrado Chromium. Define CHROME_PATH.');
@@ -128,19 +76,22 @@ const puerto = servidor.address().port;
 const base = `http://127.0.0.1:${puerto}/`;
 
 const carpeta = await mkdtemp(join(tmpdir(), 'arima-smoke-'));
+const navegador = await chromium.launch({ executablePath: ejecutable, args: ['--no-sandbox'] });
+
 const rutaImagen = join(carpeta, 'macrame colgante beige.png');
-await imagenDePrueba(rutaImagen);
+await writeFile(rutaImagen, await imagenDePrueba(navegador));
+
+const rutaVideo = join(carpeta, 'taller en marcha.webm');
+await writeFile(rutaVideo, await videoDePrueba(navegador));
 
 // Un taller entero: sirve para la ficha común, que es lo que se usa cuando
 // llegan varias fotos del mismo sitio.
 const rutasTaller = [];
 for (const n of [1, 2, 3]) {
   const ruta = join(carpeta, `taller robots ${n}.png`);
-  await imagenDePrueba(ruta);
+  await writeFile(ruta, await imagenDePrueba(navegador));
   rutasTaller.push(ruta);
 }
-
-const navegador = await chromium.launch({ executablePath: ejecutable, args: ['--no-sandbox'] });
 const contexto = await navegador.newContext({ viewport: { width: 1180, height: 900 } });
 const pagina = await contexto.newPage();
 
@@ -235,7 +186,7 @@ try {
 
   // ---------------------------------------------------------- importar
   await pagina.getByRole('button', { name: 'Importar', exact: true }).click();
-  await pagina.locator('input[accept="image/*"]').setInputFiles(rutaImagen);
+  await pagina.locator('input[accept*="image/*"]').setInputFiles(rutaImagen);
 
   await pagina.waitForSelector('.estadistica__valor', { timeout: 20000 });
   const nuevas = await pagina.locator('.estadistica__valor').first().textContent();
@@ -402,6 +353,42 @@ try {
     (await pagina.locator('.grupo__nombre').allTextContents()).some((t) => /Cerámica/.test(t)),
   );
 
+  // ------------------------------------------------------- vídeos
+  await pagina.getByRole('button', { name: 'Importar', exact: true }).click();
+  await pagina.locator('input[accept*="image/*"]').setInputFiles(rutaVideo);
+  await pagina.waitForSelector('.estadistica__valor', { timeout: 40000 });
+  comprobar(
+    'Importa un vídeo como una foto más',
+    (await pagina.locator('.estadistica__valor').first().textContent())?.trim() === '1',
+    `nuevas: ${await pagina.locator('.estadistica__valor').first().textContent()}`,
+  );
+
+  await pagina.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
+  await pagina.getByRole('button', { name: 'Todas', exact: true }).click();
+  await pagina.getByLabel('Buscar en el catálogo').fill('taller en marcha');
+  await pagina.waitForTimeout(700);
+
+  comprobar('El vídeo se distingue en la galería', await pagina.locator('.ficha__video').isVisible());
+  comprobar(
+    'Y tiene portada, no un hueco vacío',
+    await pagina.locator('.ficha__imagen').first().evaluate((n) => n.naturalWidth > 0),
+  );
+
+  await pagina.locator('.ficha__marco').first().click();
+  await pagina.waitForSelector('.visor', { timeout: 10000 });
+  comprobar(
+    'Al abrirlo sale el reproductor, no una imagen rota',
+    (await pagina.locator('.visor video').count()) === 1,
+  );
+  comprobar(
+    'El reproductor tiene los controles puestos',
+    await pagina.locator('.visor video').evaluate((v) => v.controls === true),
+  );
+  await pagina.locator('.hoja__barra button').last().click();
+  await pagina.getByLabel('Buscar en el catálogo').fill('');
+  await pagina.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
+  await pagina.waitForTimeout(400);
+
   // El botón de la ficha tiene que verse sin descubrir el modo selección.
   await pagina.getByRole('button', { name: 'Catálogo', exact: true }).first().click();
   await pagina.waitForTimeout(400);
@@ -427,7 +414,7 @@ try {
 
   // --------------------------------------------------- ficha común
   await pagina.getByRole('button', { name: 'Importar', exact: true }).click();
-  await pagina.locator('input[accept="image/*"]').setInputFiles(rutasTaller);
+  await pagina.locator('input[accept*="image/*"]').setInputFiles(rutasTaller);
   await pagina.waitForSelector('.estadistica__valor', { timeout: 30000 });
   comprobar(
     'Importa las tres fotos del taller',

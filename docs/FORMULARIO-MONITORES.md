@@ -3,6 +3,10 @@
 El formulario con el que los monitores mandan las fotos de sus talleres. Llegan
 al catálogo compartido y se quedan en **Revisar** hasta que alguien las mira.
 
+> **Vídeos.** El formulario acepta también vídeos, hasta 48 MB cada uno. Van
+> tal cual, sin comprimir, así que conviene avisar a los monitores de que un
+> vídeo largo gasta datos de verdad: mejor grabarlos cortos.
+
 ## El enlace
 
 ```

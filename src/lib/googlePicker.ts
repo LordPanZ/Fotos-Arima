@@ -6,6 +6,8 @@
  * la selección como terminada → se listan y descargan los elementos elegidos.
  */
 
+import { LIMITE_VIDEO } from './video';
+
 const BASE = 'https://photospicker.googleapis.com/v1';
 
 export interface SesionSelector {
@@ -143,8 +145,6 @@ export async function listarSeleccion(
     for (const bruto of datos.mediaItems ?? []) {
       const archivo = bruto.mediaFile;
       if (!archivo?.baseUrl) continue;
-      // Los vídeos se ignoran: esta app cataloga fotografías.
-      if ((bruto.type ?? 'PHOTO') !== 'PHOTO') continue;
 
       elementos.push({
         id: bruto.id,
@@ -165,16 +165,21 @@ export async function listarSeleccion(
 }
 
 /**
- * Descarga los bytes de una foto seleccionada.
+ * Descarga los bytes de una foto o un vídeo seleccionado.
  * La API del Selector exige la cabecera `Authorization` también aquí, así que
  * no sirve poner `baseUrl` directamente en un `<img>`.
+ *
+ * El sufijo cambia según el tipo: las fotos se piden ya reescaladas con
+ * `=w…-h…`, y los vídeos con `=dv`, que es lo que devuelve el archivo en vez
+ * de un fotograma.
  */
 export async function descargarFoto(
   token: string,
   baseUrl: string,
   ladoMaximo = 2048,
+  tipo: 'PHOTO' | 'VIDEO' = 'PHOTO',
 ): Promise<Blob> {
-  const url = `${baseUrl}=w${ladoMaximo}-h${ladoMaximo}`;
+  const url = tipo === 'VIDEO' ? `${baseUrl}=dv` : `${baseUrl}=w${ladoMaximo}-h${ladoMaximo}`;
   let respuesta: Response;
   try {
     respuesta = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -185,6 +190,17 @@ export async function descargarFoto(
     );
   }
   if (!respuesta.ok) throw await errorLegible(respuesta);
+
+  // Mirar la cabecera antes de descargar: un vídeo largo son cientos de megas
+  // y no tiene sentido gastarlos para rechazarlo después.
+  const largo = Number(respuesta.headers.get('content-length') ?? 0);
+  if (tipo === 'VIDEO' && largo > LIMITE_VIDEO) {
+    throw new Error(
+      `El vídeo pesa ${Math.round(largo / 1048576)} MB y el máximo son ` +
+        `${Math.round(LIMITE_VIDEO / 1048576)} MB. Recórtalo en Google Fotos antes de traerlo.`,
+    );
+  }
+
   return respuesta.blob();
 }
 

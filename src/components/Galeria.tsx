@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Foto } from '../types';
 import { listaCategorias, categoria } from '../taxonomy';
+import { duracionLegible, esVideo } from '../lib/video';
 import { necesitaRevision } from '../lib/classifier';
 import { ImagenFoto, formatearFecha } from './comunes';
 import { IconoComprobado, IconoEstrella } from './Icons';
@@ -53,6 +54,11 @@ export function FichaFoto({
         aria-label={`Abrir «${foto.nombre}»`}
       >
         <ImagenFoto id={foto.id} alt={foto.nombre} className="ficha__imagen" />
+        {esVideo(foto) && (
+          <span className="ficha__video" aria-label="Vídeo">
+            ▶ {duracionLegible(foto.duracion)}
+          </span>
+        )}
       </button>
 
       <div className="ficha__pie">

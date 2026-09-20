@@ -171,7 +171,7 @@ export function DetalleFoto({ foto, contexto, alCerrar, alCambiarFoto }: Props) 
 
         <div className="hoja__cuerpo">
           <div className="visor">
-            <ImagenFoto id={foto.id} alt={foto.nombre} tamano="completa" />
+            <ImagenFoto id={foto.id} alt={foto.nombre} tamano="completa" mime={foto.tipoMime} />
           </div>
 
           <div>

@@ -400,7 +400,7 @@ try {
   const titulos = multi.getByLabel('Tailerraren izenburua *');
   const lugares = multi.getByLabel('Lekua *');
   const fechas = multi.getByLabel('Data *');
-  const entradas = multi.locator('input[accept="image/*"]');
+  const entradas = multi.locator('input[accept*="image/*"]');
 
   await titulos.nth(0).fill('Makrame tailerra Getxon');
   await lugares.nth(0).fill('Algortako ludoteka');

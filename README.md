@@ -19,6 +19,11 @@ formulario **Tailerren Argazkiak Arima** (en euskera, instalable aparte), con el
 que los monitores mandan las fotos de sus talleres con título, fecha, lugar y
 los materiales usados — [docs/FORMULARIO-MONITORES.md](docs/FORMULARIO-MONITORES.md).
 
+**Vídeos.** Por los tres caminos entran también vídeos, con las mismas fichas,
+tipos, etiquetas y búsqueda que una foto. En la galería salen con su distintivo
+y su duración, y se reproducen al abrirlos. Se guardan tal cual, sin
+recomprimir, hasta 48 MB cada uno.
+
 **Poner el tipo.** La app **no clasifica sola**: las fotos entran sin tipo y se
 lo pones tú, en *Revisar* de una en una o a todas de golpe con **Rellenar
 ficha**. Si quieres que además te lo proponga un modelo de visión, añade una

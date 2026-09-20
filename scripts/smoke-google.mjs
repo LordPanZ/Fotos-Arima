@@ -21,6 +21,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { imagenDePrueba, videoDePrueba } from './medios.mjs';
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(raiz, 'dist');
@@ -72,34 +73,6 @@ if (!ejecutable) {
   process.exit(1);
 }
 
-/** PNG con textura, para que el heurístico no lo tome por una captura. */
-async function imagenDePrueba(navegador) {
-  const pagina = await navegador.newPage({ viewport: { width: 320, height: 320 } });
-  const datos = await pagina.evaluate(() => {
-    const lienzo = document.createElement('canvas');
-    lienzo.width = 320;
-    lienzo.height = 320;
-    const ctx = lienzo.getContext('2d');
-    const degradado = ctx.createLinearGradient(0, 0, 320, 320);
-    degradado.addColorStop(0, '#c98b5e');
-    degradado.addColorStop(0.5, '#e8d9c0');
-    degradado.addColorStop(1, '#7a5a3a');
-    ctx.fillStyle = degradado;
-    ctx.fillRect(0, 0, 320, 320);
-    const imagen = ctx.getImageData(0, 0, 320, 320);
-    for (let i = 0; i < imagen.data.length; i += 4) {
-      const ruido = (Math.random() - 0.5) * 60;
-      imagen.data[i] = Math.max(0, Math.min(255, imagen.data[i] + ruido));
-      imagen.data[i + 1] = Math.max(0, Math.min(255, imagen.data[i + 1] + ruido));
-      imagen.data[i + 2] = Math.max(0, Math.min(255, imagen.data[i + 2] + ruido));
-    }
-    ctx.putImageData(imagen, 0, 0);
-    return lienzo.toDataURL('image/png').split(',')[1];
-  });
-  await pagina.close();
-  return Buffer.from(datos, 'base64');
-}
-
 const PICKER = 'https://picker.falso/elige';
 const estado = { seleccionLista: false, consultas: 0, sesionBorrada: false };
 
@@ -108,6 +81,10 @@ const base = `http://127.0.0.1:${servidor.address().port}/`;
 
 const navegador = await chromium.launch({ executablePath: ejecutable, args: ['--no-sandbox'] });
 const foto = await imagenDePrueba(navegador);
+const video = await videoDePrueba(navegador);
+
+/** Qué sufijo ha pedido la app de cada `baseUrl`. Los vídeos exigen `=dv`. */
+const descargas = [];
 const contexto = await navegador.newContext({ viewport: { width: 1180, height: 900 } });
 
 const erroresConsola = [];
@@ -184,15 +161,30 @@ await contexto.route('https://photospicker.googleapis.com/v1/**', async (ruta) =
             mediaFileMetadata: { width: 320, height: 320 },
           },
         },
+        {
+          id: 'video-1',
+          createTime: '2026-09-18T10:05:00Z',
+          type: 'VIDEO',
+          mediaFile: {
+            baseUrl: 'https://fotos.falso/video-1',
+            mimeType: 'video/webm',
+            filename: 'taller en marcha.webm',
+            mediaFileMetadata: { width: 320, height: 240 },
+          },
+        },
       ],
     });
   }
   return json({});
 });
 
-await contexto.route('https://fotos.falso/**', (ruta) =>
-  ruta.fulfill({ status: 200, contentType: 'image/png', body: foto }),
-);
+await contexto.route('https://fotos.falso/**', (ruta) => {
+  const url = ruta.request().url();
+  descargas.push(url);
+  return url.includes('video-1')
+    ? ruta.fulfill({ status: 200, contentType: 'video/webm', body: video })
+    : ruta.fulfill({ status: 200, contentType: 'image/png', body: foto });
+});
 await contexto.route(`${PICKER}*`, (ruta) =>
   ruta.fulfill({ status: 200, contentType: 'text/html', body: '<title>Selector</title>elige aquí' }),
 );
@@ -265,9 +257,16 @@ try {
   );
 
   // ------------------------------------------------------ la selección
-  await pagina.waitForSelector('.estadistica__valor', { timeout: 30000 });
+  await pagina.waitForSelector('.estadistica__valor', { timeout: 40000 });
   const nuevas = await pagina.locator('.estadistica__valor').first().textContent();
-  comprobar('Importa la foto elegida en Google', nuevas?.trim() === '1', `valor leído: ${nuevas}`);
+  comprobar('Importa lo elegido en Google', nuevas?.trim() === '2', `valor leído: ${nuevas}`);
+
+  // Un vídeo no se pide como una foto: `=w…-h…` devolvería un fotograma suelto.
+  comprobar(
+    'La foto se pide reescalada y el vídeo entero',
+    descargas.some((u) => u.includes('foto-1=w')) && descargas.some((u) => u.endsWith('video-1=dv')),
+    descargas.join(' | '),
+  );
   comprobar('Ha sondeado la sesión más de una vez', estado.consultas >= 2, `consultas: ${estado.consultas}`);
   comprobar('Cierra la ventana del selector al terminar', emergente.isClosed());
 
@@ -282,8 +281,8 @@ try {
   await pagina.getByRole('button', { name: /^Revisar/ }).first().click();
   await pagina.waitForSelector('.revision__marco img', { timeout: 20000 });
   comprobar(
-    'Solo ha entrado la foto elegida',
-    /^1 foto esperando tipo/.test((await pagina.locator('.revision h1 + span').first().textContent()) ?? ''),
+    'Entran las dos, esperando tipo',
+    /^2 fotos esperando tipo/.test((await pagina.locator('.revision h1 + span').first().textContent()) ?? ''),
     (await pagina.locator('.revision h1 + span').first().textContent()) ?? '(sin texto)',
   );
   comprobar(

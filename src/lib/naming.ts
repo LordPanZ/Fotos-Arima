@@ -45,6 +45,12 @@ export function extensionDe(foto: Foto): string {
     'image/gif': 'gif',
     'image/heic': 'heic',
     'image/avif': 'avif',
+    'video/mp4': 'mp4',
+    'video/quicktime': 'mov',
+    'video/webm': 'webm',
+    'video/x-matroska': 'mkv',
+    'video/3gpp': '3gp',
+    'video/ogg': 'ogv',
   };
   const deArchivo = foto.archivoOriginal.match(/\.([a-z0-9]{2,5})$/i)?.[1]?.toLowerCase();
   return porMime[foto.tipoMime] ?? deArchivo ?? 'jpg';

@@ -75,7 +75,7 @@ export async function exportarZip(fotos: Foto[], opciones: OpcionesExportacion):
     incluidas += 1;
   }
 
-  if (!incluidas) throw new Error('No se ha encontrado ninguna imagen guardada para exportar.');
+  if (!incluidas) throw new Error('No se ha encontrado ningún archivo guardado para exportar.');
 
   if (opciones.incluirCatalogo) {
     const conImagen = fotos.filter((f) => rutas.has(f.id));

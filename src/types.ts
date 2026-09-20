@@ -39,6 +39,8 @@ export interface Foto {
   ancho: number;
   alto: number;
   bytes: number;
+  /** Segundos, solo en los vídeos. Que sea vídeo se sabe por `tipoMime`. */
+  duracion?: number;
   /** Fecha de captura (ISO). Si no se conoce, la de importación. */
   fecha: string;
   importadaEl: string;
@@ -88,7 +90,8 @@ export interface Ajustes {
   concurrencia: number;
   /** Ocultar en la galería lo que el clasificador ha descartado. */
   ocultarDescartadas: boolean;
-  /** Lado mayor (px) de la copia que se guarda en el dispositivo. */
+  /** Lado mayor (px) de la copia que se guarda. Solo afecta a las fotos:
+   *  los vídeos se guardan tal cual, sin recomprimir. */
   tamanoMaximo: number;
   /** Tipos creados a mano, además de los que trae la app. */
   categoriasPropias: CategoriaPropia[];

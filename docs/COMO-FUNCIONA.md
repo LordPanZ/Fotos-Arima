@@ -94,6 +94,28 @@ Si te falta un tipo justo cuando lo necesitas, hay un **Crear un tipo** dentro
 de las propias rejillas de categorías, tanto al revisar como al rellenar la
 ficha; se crea y queda elegido sin salir de la pantalla.
 
+## Vídeos
+
+Un vídeo es una ficha más: mismo `Foto`, mismos tipos, mismas etiquetas, misma
+búsqueda. Lo que cambia es cómo se guarda, y está en `src/lib/video.ts`.
+
+- **No se recodifica.** Reescalar un vídeo en el navegador tarda muchísimo y
+  pierde calidad, así que el archivo se guarda tal cual llegó. `tamanoMaximo`
+  de Ajustes solo afecta a las fotos.
+- **La portada es un fotograma.** Se carga el vídeo en un `<video>` oculto
+  (`muted` + `playsInline`, que es lo que deja decodificar en el móvil), se
+  busca el segundo 1 —o la mitad, si dura menos— y se pinta en un lienzo. Si el
+  navegador da los metadatos pero no deja pintar el fotograma (pasa con algún
+  HEVC de iPhone), se guarda una portada sosa con un ▶ y el vídeo entra igual.
+- **Hay un tope de 48 MB por archivo.** El almacén compartido corta en 50 MB,
+  así que aceptar más sería prometer una subida que va a fallar. Al traerlo de
+  Google se mira la cabecera `content-length` antes de descargar nada.
+- **Desde Google Fotos se pide distinto.** El sufijo de `baseUrl` es `=dv` para
+  vídeo, no `=w…-h…`, que devolvería un fotograma suelto.
+- **Que algo es un vídeo se sabe por `tipoMime`**, no por un campo nuevo: así
+  las fichas que ya estaban guardadas y las que llegan del catálogo compartido
+  siguen valiendo sin migración ninguna.
+
 ## Versiones y copia guardada
 
 El service worker guarda la app entera para que funcione sin conexión, y eso

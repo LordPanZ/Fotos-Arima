@@ -13,10 +13,17 @@ interface PropsImagen {
   /** `completa` carga el original guardado; por defecto se usa la miniatura. */
   tamano?: 'miniatura' | 'completa';
   className?: string;
+  /**
+   * Tipo del archivo guardado. Si es un vídeo y se pide `completa`, en vez de
+   * una imagen sale el reproductor. En miniatura siempre es una imagen: lo que
+   * se guarda ahí es el fotograma de portada, no el vídeo.
+   */
+  mime?: string;
 }
 
-export function ImagenFoto({ id, alt, tamano = 'miniatura', className }: PropsImagen) {
+export function ImagenFoto({ id, alt, tamano = 'miniatura', className, mime }: PropsImagen) {
   const [url, setUrl] = useState<string | null>(null);
+  const video = tamano === 'completa' && Boolean(mime?.startsWith('video/'));
 
   useEffect(() => {
     let vigente = true;
@@ -42,6 +49,11 @@ export function ImagenFoto({ id, alt, tamano = 'miniatura', className }: PropsIm
   }, [id, tamano]);
 
   if (!url) return <div className={className} aria-label={alt} />;
+  if (video) {
+    return (
+      <video className={className} src={url} controls playsInline preload="metadata" aria-label={alt} />
+    );
+  }
   return <img className={className} src={url} alt={alt} loading="lazy" decoding="async" />;
 }
 

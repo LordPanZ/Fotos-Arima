@@ -127,7 +127,13 @@ export function Revisar({ alIrAImportar }: { alIrAImportar(): void }) {
       )}
 
       <div className="revision__marco">
-        <ImagenFoto key={actual.id} id={actual.id} alt={actual.nombre} tamano="completa" />
+        <ImagenFoto
+          key={actual.id}
+          id={actual.id}
+          alt={actual.nombre}
+          tamano="completa"
+          mime={actual.tipoMime}
+        />
       </div>
 
       <div className="revision__sugerencia">

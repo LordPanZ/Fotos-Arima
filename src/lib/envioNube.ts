@@ -3,6 +3,7 @@ import { SIN_CLASIFICAR } from '../taxonomy';
 import { crearMiniatura, huella, reescalar } from './image';
 import { enlacesSubida, guardarFichas, subirImagen } from './nube';
 import { nombreDeFoto, nuevoIdEnvio, type DatosFormulario } from './envio';
+import { LIMITE_VIDEO, datosDeVideo, pareceVideo } from './video';
 
 /**
  * Envío directo al catálogo compartido desde el formulario de monitores.
@@ -64,8 +65,28 @@ export async function enviarAlBuzon(
 
     for (const [posicion, archivo] of tanda.entries()) {
       try {
-        const { blob: completa, ancho, alto } = await reescalar(archivo, LADO_MAXIMO);
-        const miniatura = await crearMiniatura(completa);
+        // Los vídeos van tal cual: recodificarlos en el móvil del monitor
+        // tardaría más que el propio envío.
+        const video = pareceVideo(archivo);
+        if (video && archivo.size > LIMITE_VIDEO) {
+          throw new Error(
+            `Bideoak ${Math.round(archivo.size / 1048576)} MB ditu eta gehienez ` +
+              `${Math.round(LIMITE_VIDEO / 1048576)} MB onartzen dira.`,
+          );
+        }
+
+        const { completa, ancho, alto, duracion, miniatura } = video
+          ? { completa: archivo as Blob, ...(await datosDeVideo(archivo)) }
+          : await (async () => {
+              const escalada = await reescalar(archivo, LADO_MAXIMO);
+              return {
+                completa: escalada.blob,
+                ancho: escalada.ancho,
+                alto: escalada.alto,
+                duracion: undefined as number | undefined,
+                miniatura: await crearMiniatura(escalada.blob),
+              };
+            })();
         const ahora = new Date().toISOString();
 
         preparadas.push({
@@ -80,9 +101,10 @@ export async function enviarAlBuzon(
             // El título lo escribió el monitor: cuenta como nombre puesto a
             // mano y la plantilla no lo sobrescribe al analizar la foto.
             nombreEditado: true,
-            tipoMime: completa.type || 'image/jpeg',
+            tipoMime: completa.type || (video ? 'video/mp4' : 'image/jpeg'),
             ancho,
             alto,
+            duracion,
             bytes: completa.size,
             fecha,
             importadaEl: ahora,

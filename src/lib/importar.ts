@@ -4,6 +4,7 @@ import { guardarFoto, guardarImagenes, idsGoogleExistentes, obtenerFoto } from '
 import { crearMiniatura, dimensiones, fechaExif, huella, reescalar } from './image';
 import { descargarFoto as descargarDeGoogle, listarSeleccion, type ElementoSeleccionado } from './googlePicker';
 import { leerEnvio, nombreDeFoto, type EnvioLeido } from './envio';
+import { LIMITE_VIDEO, datosDeVideo, pareceVideo } from './video';
 
 export interface ProgresoImportacion {
   fase: 'preparando' | 'descargando' | 'guardando' | 'hecho';
@@ -19,6 +20,7 @@ export interface ResultadoImportacion {
 }
 
 const TIPOS_ACEPTADOS = /^image\/(jpeg|png|webp|gif|avif|heic|heif)$/i;
+const EXTENSIONES_IMAGEN = /\.(jpe?g|png|webp|gif|avif|heic|heif)$/i;
 
 function fichaVacia(base: Omit<Foto, 'estado' | 'entraEnCatalogo' | 'confianza' | 'categoria' | 'materiales' | 'colores' | 'etiquetas' | 'motor' | 'revision' | 'favorita' | 'nombreEditado' | 'actualizadaEn'>): Foto {
   return {
@@ -45,7 +47,23 @@ async function guardarImagen(id: string, blob: Blob, ladoMaximo: number) {
   const { blob: completa, ancho, alto } = await reescalar(blob, ladoMaximo);
   const miniatura = await crearMiniatura(completa);
   await guardarImagenes(id, completa, miniatura);
-  return { completa, ancho, alto };
+  return { completa, ancho, alto, duracion: undefined as number | undefined };
+}
+
+/**
+ * Guarda un vídeo tal cual, con un fotograma de portada.
+ * No se recodifica: hacerlo en el navegador es lentísimo y se pierde calidad.
+ */
+async function guardarVideo(id: string, blob: Blob) {
+  if (blob.size > LIMITE_VIDEO) {
+    throw new Error(
+      `El vídeo pesa ${Math.round(blob.size / 1048576)} MB y el máximo son ` +
+        `${Math.round(LIMITE_VIDEO / 1048576)} MB. Recórtalo o grábalo con menos calidad.`,
+    );
+  }
+  const { ancho, alto, duracion, miniatura } = await datosDeVideo(blob);
+  await guardarImagenes(id, blob, miniatura);
+  return { completa: blob, ancho, alto, duracion };
 }
 
 /* ------------------------------------------------------- archivos locales */
@@ -56,17 +74,19 @@ export async function importarArchivos(
   alProgresar?: (p: ProgresoImportacion) => void,
 ): Promise<ResultadoImportacion> {
   const resultado: ResultadoImportacion = { nuevas: [], duplicadas: 0, fallidas: [] };
-  const imagenes = archivos.filter((a) => TIPOS_ACEPTADOS.test(a.type) || /\.(jpe?g|png|webp|gif|avif|heic|heif)$/i.test(a.name));
+  const aceptados = archivos.filter(
+    (a) => TIPOS_ACEPTADOS.test(a.type) || EXTENSIONES_IMAGEN.test(a.name) || pareceVideo(a),
+  );
 
   for (const archivo of archivos) {
-    if (!imagenes.includes(archivo)) {
-      resultado.fallidas.push({ archivo: archivo.name, motivo: 'No es una imagen.' });
+    if (!aceptados.includes(archivo)) {
+      resultado.fallidas.push({ archivo: archivo.name, motivo: 'No es una imagen ni un vídeo.' });
     }
   }
 
   let hechas = 0;
-  for (const archivo of imagenes) {
-    alProgresar?.({ fase: 'guardando', hechas, total: imagenes.length, actual: archivo.name });
+  for (const archivo of aceptados) {
+    alProgresar?.({ fase: 'guardando', hechas, total: aceptados.length, actual: archivo.name });
     try {
       const id = `local-${await huella(archivo)}-${archivo.size}`;
       if (await obtenerFoto(id)) {
@@ -74,9 +94,12 @@ export async function importarArchivos(
         continue;
       }
 
-      const { completa, ancho, alto } = await guardarImagen(id, archivo, ajustes.tamanoMaximo);
+      const video = pareceVideo(archivo);
+      const { completa, ancho, alto, duracion } = video
+        ? await guardarVideo(id, archivo)
+        : await guardarImagen(id, archivo, ajustes.tamanoMaximo);
       const fecha =
-        (await fechaExif(archivo)) ??
+        (video ? null : await fechaExif(archivo)) ??
         (archivo.lastModified ? new Date(archivo.lastModified).toISOString() : new Date().toISOString());
 
       const foto = fichaVacia({
@@ -84,9 +107,10 @@ export async function importarArchivos(
         origen: 'local',
         archivoOriginal: archivo.name,
         nombre: archivo.name.replace(/\.[^.]+$/, ''),
-        tipoMime: completa.type || archivo.type || 'image/jpeg',
+        tipoMime: completa.type || archivo.type || (video ? 'video/mp4' : 'image/jpeg'),
         ancho,
         alto,
+        duracion,
         bytes: completa.size,
         fecha,
         importadaEl: new Date().toISOString(),
@@ -101,11 +125,11 @@ export async function importarArchivos(
       });
     } finally {
       hechas += 1;
-      alProgresar?.({ fase: 'guardando', hechas, total: imagenes.length });
+      alProgresar?.({ fase: 'guardando', hechas, total: aceptados.length });
     }
   }
 
-  alProgresar?.({ fase: 'hecho', hechas, total: imagenes.length });
+  alProgresar?.({ fase: 'hecho', hechas, total: aceptados.length });
   return resultado;
 }
 
@@ -163,12 +187,22 @@ async function importarElemento(
   ajustes: Ajustes,
 ): Promise<Foto> {
   const id = `google-${elemento.id}`;
-  const descargada = await descargarDeGoogle(token, elemento.baseUrl, ajustes.tamanoMaximo);
-  const { completa, ancho, alto } = await guardarImagen(id, descargada, ajustes.tamanoMaximo);
+  const esUnVideo = elemento.tipo === 'VIDEO' || elemento.tipoMime.startsWith('video/');
+  const descargada = await descargarDeGoogle(
+    token,
+    elemento.baseUrl,
+    ajustes.tamanoMaximo,
+    esUnVideo ? 'VIDEO' : 'PHOTO',
+  );
+
+  const { completa, ancho, alto, duracion } = esUnVideo
+    ? await guardarVideo(id, descargada)
+    : await guardarImagen(id, descargada, ajustes.tamanoMaximo);
 
   // Google ya devuelve las dimensiones, pero solo del original: si el reescalado
   // ha cambiado algo, mandan las medidas reales del archivo que guardamos.
-  const medidas = ancho && alto ? { ancho, alto } : await dimensiones(completa);
+  const medidas =
+    ancho && alto ? { ancho, alto } : esUnVideo ? { ancho: 0, alto: 0 } : await dimensiones(completa);
 
   const foto = fichaVacia({
     id,
@@ -179,8 +213,12 @@ async function importarElemento(
     tipoMime: completa.type || elemento.tipoMime,
     ancho: medidas.ancho,
     alto: medidas.alto,
+    duracion,
     bytes: completa.size,
-    fecha: elemento.creadaEl ?? (await fechaExif(completa)) ?? new Date().toISOString(),
+    fecha:
+      elemento.creadaEl ??
+      (esUnVideo ? null : await fechaExif(completa)) ??
+      new Date().toISOString(),
     importadaEl: new Date().toISOString(),
   });
 
@@ -239,16 +277,21 @@ export async function importarEnvio(
         continue;
       }
 
-      const { completa, ancho, alto } = await guardarImagen(id, foto.blob, ajustes.tamanoMaximo);
+      const video = pareceVideo({ type: foto.blob.type, name: foto.nombre });
+      const { completa, ancho, alto, duracion } = video
+        ? await guardarVideo(id, foto.blob)
+        : await guardarImagen(id, foto.blob, ajustes.tamanoMaximo);
+
       const ficha = fichaVacia({
         id,
         origen: 'envio',
         evento,
         archivoOriginal: foto.nombre.replace(/^fotos\//, ''),
         nombre: nombreDeFoto(manifiesto.titulo, posicion, fotos.length),
-        tipoMime: completa.type || 'image/jpeg',
+        tipoMime: completa.type || (video ? 'video/mp4' : 'image/jpeg'),
         ancho,
         alto,
+        duracion,
         bytes: completa.size,
         fecha,
         importadaEl: new Date().toISOString(),
